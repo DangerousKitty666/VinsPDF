@@ -1,0 +1,7 @@
+/work/
+/pdfium.dll
+/VinsPDF.exe
+/VinsPDF-Setup-*.exe
+/*.zip
+*.log
+association-error.txt
