@@ -1,0 +1,62 @@
+name: Build and release VinsPDF
+on:
+  push:
+    branches: [main]
+    paths: [release.json, .github/workflows/release.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: vinspdf-release
+  cancel-in-progress: false
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore pinned PDFium and compile
+        shell: pwsh
+        run: ./build.ps1
+      - name: Test PDF editing and updater validation
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force work/tests | Out-Null
+          $test = Start-Process ./VinsPDF.exe -ArgumentList '--v026-engine-test work/tests tests/line-fixture.pdf' -Wait -PassThru -WindowStyle Hidden
+          Get-Content work/tests/engine-026.txt
+          if ($test.ExitCode -ne 0) { throw 'Engine checks failed' }
+      - name: Prepare verified installer compiler
+        shell: pwsh
+        run: |
+          $release = Invoke-RestMethod https://api.github.com/repos/jrsoftware/issrc/releases/tags/is-6_7_4
+          $asset = $release.assets | Where-Object name -eq 'innosetup-6.7.4.exe'
+          Invoke-WebRequest $asset.browser_download_url -OutFile work/inno-setup.exe
+          if ('sha256:' + (Get-FileHash work/inno-setup.exe -Algorithm SHA256).Hash.ToLowerInvariant() -ne $asset.digest) { throw 'Compiler checksum mismatch' }
+          $dir = Join-Path $PWD 'work/inno'
+          $setup = Start-Process work/inno-setup.exe -ArgumentList "/CURRENTUSER /PORTABLE=1 /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /NOICONS /TASKS=`"`" /DIR=`"$dir`"" -Wait -PassThru -WindowStyle Hidden
+          if ($setup.ExitCode -ne 0) { throw 'Compiler extraction failed' }
+      - name: Build and test installer
+        shell: pwsh
+        run: |
+          ./work/inno/ISCC.exe /Q /O"$PWD/work/release" ./installer/VinsPDF.iss
+          if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed' }
+          $version = (Get-Content release.json | ConvertFrom-Json).version
+          ./tests/installer-check.ps1 -Installer "$PWD/work/release/VinsPDF-Setup-$version.exe"
+      - name: Package portable app and checksums
+        shell: pwsh
+        run: |
+          $version = (Get-Content release.json | ConvertFrom-Json).version
+          New-Item -ItemType Directory -Force work/portable/VinsPDF | Out-Null
+          Copy-Item VinsPDF.exe,VinsPDF.exe.config,pdfium.dll,VinsPDF-document.ico,README.txt,LICENSE.txt -Destination work/portable/VinsPDF
+          Copy-Item licenses -Destination work/portable/VinsPDF/licenses -Recurse
+          Compress-Archive work/portable/VinsPDF -DestinationPath "work/release/VinsPDF-$version-win-x64.zip"
+          Get-ChildItem work/release -File | ForEach-Object { "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant())  $($_.Name)" } | Set-Content work/release/SHA256SUMS.txt
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $version = (Get-Content release.json | ConvertFrom-Json).version
+          gh release view "v$version" 2>$null
+          if ($LASTEXITCODE -eq 0) { throw 'This version is already released. Bump release.json, AssemblyInfo.cs and installer version for a new release.' }
+          gh release create "v$version" ./work/release/* --title "VinsPDF $version" --notes-file CHANGELOG.txt --target $env:GITHUB_SHA
+          if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }

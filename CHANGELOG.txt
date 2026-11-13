@@ -1,0 +1,13 @@
+VinsPDF 0.26 — 12 November 2026
+- Single/two-page viewing layouts; left page thumbnails without end arrows.
+- Right-side cascading editor properties; inline text editing with font controls.
+- Edit-mode wheel page lock; undo/redo retains current-page camera position.
+- Rotation handle and numeric component rotation; Shift 15-degree snapping.
+- Immediate scaled reuse of page detail during zoom, delayed sharp refinement.
+- Document tabs with retained edits/history and detachable windows.
+- Per-user Windows installer, automatic PDF registration and icon setup.
+- Check for updates: public GitHub releases, SHA-256 verification, saved-document
+  guard and automatic in-place installer update/restart.
+
+0.25: text-line grouping, grid, multi-selection, floating editor, document icons.
+0.2: text/image editing and saving. 0.1: native PDFium viewer.
