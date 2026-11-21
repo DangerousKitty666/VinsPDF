@@ -1,0 +1,46 @@
+VinsPDF 0.27 validation - 21 November 2026
+
+Sequential ordinary local runs, same pinned PDFium. OS caches were not reset;
+these observations are not controlled cold-start benchmarks or guarantees.
+A: user-approved current A012, 15 pages, 54.6 MB. B: A014, 24 pages, 62.1 MB.
+
+                         0.26 median     0.27 median
+A first renders (15)       1517 ms          1407 ms
+B first renders (24)       1360 ms          1384 ms
+A repeat renders (5)       1919 ms          <1 ms
+B repeat renders (5)       1786 ms          <1 ms
+A zoom viewport (1)         587 ms           508 ms
+B zoom viewport (1)         983 ms           977 ms
+
+Repeat timings measure returning a cached bitmap, not the whole UI. First-render
+speed is essentially unchanged. B's first revisit required a render after eviction;
+subsequent calls hit cache. The shared raster cache is limited to 96 MB, not total
+process memory. Native data, edits/undo, tabs and UI images require extra memory.
+
+Passed: all pages rendered; normal/rotated first-page PNGs match 0.26 pixel-for-pixel
+on both drawings. Save/reopen of the styled fixture matches pixel-for-pixel.
+Both drawings passed text grouping, Unicode/font/spacing/header-footer edits,
+text/image move/resize/import/delete, undo/redo, multipage editing, failed saves,
+save/reopen and overwrite. Page counts, boxes, rotations and original layer names
+were retained. Originals were not changed.
+
+Synthetic checks pass colour/alignment, named layer persistence/hide/show/lock,
+cache pixels/invalidation/disposal, combine, page-range order, extraction,
+reordering/rotation, original and reduced JPEG PDF exports, updater validation.
+Print page rendering was tested to an image; no physical printer job was sent.
+
+WinForms event tests on both large drawings pass floating panel/repeated Add text,
+Select without movement, Move/Pan, centre hand cursor, rotation preview, fixed
+camera on undo, live grid, edit-wheel lock, page overview, tabs/detach and save.
+Dark Layout menu, floating panel, rotation and page-overview images were reviewed.
+These are internal events/captures, not exhaustive physical input, high-DPI or
+multi-monitor tests. The earlier A012 revision was unavailable; the user approved
+testing the current A012 PDF instead.
+
+GitHub release checks compile, editing/updater regressions and full per-user
+installer payload, association/icon registration, in-place update and uninstall.
+See the release Actions run for the final CI result.
+
+Limits: layers are named page-level editor groups, not full PDF optional-content
+authoring. Hidden groups are included in saves/exports. Page-copy tools may lose
+document-level structures; reduced exports flatten content into images.

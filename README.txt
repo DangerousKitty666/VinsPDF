@@ -1,89 +1,68 @@
-VinsPDF 0.26 — Windows PDF viewer and editor
+VinsPDF 0.27 — 21 November 2026
 
-INSTALL / UPDATE
-Run VinsPDF-Setup-0.26.exe. It installs for the current Windows user, adds a
-shortcut and registers VinsPDF in PDF Open with / Default Apps. Windows still
-lets you choose your preferred default; Setup does not overwrite UserChoice.
-The supplied icon22 artwork is used for associated PDFs. Explorer may show
-PDF thumbnails instead of file icons. The application and installer are unsigned.
+Install VinsPDF-Setup-0.27.exe (the standard download). The installer registers
+PDF Open with / Default Apps, shortcuts and an uninstaller for the current user.
+About > Check for updates downloads, verifies and runs future installers in place.
 
-Check for updates uses public GitHub releases at:
-https://github.com/DangerousKitty666/VinsPDF/releases
-After you accept an update, the app downloads and checks the installer's SHA-256
-against GitHub's asset digest, waits for documents to be saved, closes, and
-runs Setup to update the existing installation and reopen VinsPDF. Unsaved edits
-block installation. Other running VinsPDF processes must also be closed; Setup
-does not force-terminate processes or discard edits. No background checks run.
-A portable ZIP is also available; extract the whole folder before running.
+Viewing and navigation
+- Shared 96 MB rendered-page cache; cached revisits and panning within an already
+  rendered margin avoid another native render. Next-page preparation runs idle.
+- Home, Tools, About and + followed by document tabs. + / Ctrl+O opens files.
+  Drag a tab out of the tab strip to move it into a separate window. Right-click
+  or middle-click closes tabs. Home opens the empty viewer without closing PDFs.
+- Layout: single or two pages. F9: left thumbnails. The » button beside PAGES
+  opens a translucent, scrollable overview. Select a page or click outside to close.
+- Wheel scrolls; Ctrl+wheel zooms. Editing locks wheel navigation to one page.
 
-WINDOW / LAYOUT
-Open (+ or Ctrl+O) adds a document tab. Switch by clicking tabs. Right-click or
-middle-click a tab to close it. Detach tab moves that document and its unsaved
-editing state into a separate window. Each tab retains its document/view/history.
-Layout selects Single page or Two pages (current page and following page).
-Editing uses a single active page. The left strip contains page previews and
-page numbers; F9 hides/shows it. The right editor appears when Edit is enabled.
-Wheel scrolls within a page and advances at its edge in viewing mode. In Edit
-mode it stays on the current page. Deliberate page selection remains possible.
-Ctrl+wheel zooms; drag pans in view mode; Alt+drag or middle-drag pans in Edit.
-Existing page detail is scaled immediately while a sharper render is prepared.
-Highly complex drawing pages can still require seconds for the final render.
+Editing
+- A compact floating panel: drag EDIT to reposition. Display sets opacity.
+- Select only selects, including rectangle drags beginning over an object.
+- Move selected moves/resizes/rotates an existing selection. Eight handles resize;
+  corners preserve proportions unless Shift is held. The circular handle rotates
+  with a green rectangle preview; Shift constrains it to 15-degree increments.
+- Pan moves the view. Middle-drag / Alt+drag also pan. The selection centre shows
+  a pointing-hand cursor in Move selected mode.
+- Add text types directly on the page; double-click existing text to edit it.
+  Font/text controls family, size, bold/italic, colour, left/centre/right alignment.
+  Spacing controls characters, line height and paragraph gaps (blank lines).
+  Ctrl+Enter / Apply commits text; Esc cancels. Formatting applies to the whole
+  item. No automatic paragraph reflow or mixed styles within a single item.
+- Grid appears immediately when checked; spacing and visibility update live.
+  Grid is a viewing aid, is not exported, and does not snap objects.
+- Add image imports PNG/JPEG/BMP/TIFF. Undo/redo retains the current-page camera.
+- Layers are named editor groups for top-level text and images on each page.
+  Assign selection creates/uses a name; Rename and Ungroup manage membership.
+  Names persist in saved PDFs. Visibility and locking are session editing aids:
+  saved/exported PDFs include all non-deleted objects. This is not a full editor
+  for pre-existing PDF optional-content layers or nested CAD geometry.
 
-EDITING
-Click Edit (Ctrl+E). Click text/image, or drag a rectangle to select multiple
-objects. Shift+click adds/removes items. Light outlines mark editable objects.
-Drag a selection to move. Eight handles resize it; corner handles preserve
-proportions unless Shift is held. The circular handle above a selection rotates
-it; Shift snaps rotation to 15 degrees. The Rotate selection section also accepts
-an exact angle in degrees clockwise. Ctrl+Z/Y undo/redo without recentering the
-current page. Undo may deliberately switch pages for a change on another page.
+Tools
+- Combine files: select PDFs, order them and create a new combined PDF.
+- Organise pages: reorder, remove and rotate pages into a new PDF.
+- Extract pages: ranges and ordered lists such as 1,3,5-8 or 5-1.
+- Export PDF: original-quality PDF or reduced-size JPEG-based PDF at 120/180 dpi.
+  Reduced export flattens pages: text is no longer selectable/editable as text.
+  It may not make an already optimised document smaller.
+- Print / Ctrl+P: choose printer, page range and printer settings; rendered output
+  fits the selected paper's margins. Print rendering is tested; physical printers
+  vary and have not been tested in this development session.
+Page extraction/organisation/combination copies page content. Document-level
+bookmarks, forms and optional-content layer configuration may not transfer.
 
-Double-click text, choose Edit text on page, or Add text to type inside a border
-on the PDF. Font / text expands in the right toolbar. Choose font, size, bold or
-italic there. Ctrl+Enter / Apply text commits; Esc / Cancel text cancels.
-Apply/cancel inline text before saving, navigating or closing its document.
-Inline text remains available when switching/detaching its tab. Font choices
-apply to the whole text item, not individual selected characters.
+Save and scope
+Ctrl+S offers an edited copy first; Ctrl+Shift+S always offers Save As. Saved PDFs
+are reopened and undo history clears. Native toolbar rotation is view-only;
+component rotation and Organise pages rotation are saved. Keep original files.
+Editing covers top-level PDF text and images. Scanned/outlined text, nested Form
+XObjects, annotations, form fields, OCR and password entry are not supported.
+The horizontal inline typing box approximates text; final PDF rendering shows
+actual font metrics, spacing and rotation after Apply.
 
-Click a section heading to expand/collapse Font, Spacing, Rotate, Grid or
-Header/footer settings. No separate properties dialogs are used. Panel position / opacity can float the
-editor over the document; drag its caption to move it, adjust transparency, or
-dock it back on the right.
-Spacing sets character spacing, line height and the gap after a blank paragraph
-line. Grid sets millimetre spacing, visibility and snapping; it is never saved
-into the PDF. Header/footer supports current/all pages, alignment, margin and
-{page}/{pages}. Add image uses a standard Windows file picker.
-Delete removes the selection. Recognise text lines can be disabled to work on
-individual PDF fragments when a document groups unexpectedly.
-
-SAVE / SHORTCUTS
-Ctrl+S offers an edited copy on first save; subsequent saves use that destination.
-Ctrl+Shift+S always opens Save As. Saving flushes a temporary PDF before replacing
-the destination, reopens the saved PDF and clears undo history. Failed replacement
-retains a recovery copy and reports its path. An asterisk marks unsaved edits.
-Ctrl+W closes a tab. Ctrl+0 Fit page; Ctrl+1 Actual size; Ctrl+2 Fit width.
-Page Up/Down changes pages. Circular toolbar arrows rotate only the view; view
-rotation is not saved. Selection rotation edits PDF objects and is saved.
-
-SCOPE / LIMITS
-Editable content is top-level PDF text and images, including many fragmented
-horizontal text lines. Nested Form XObjects, outlined/scanned lettering, OCR,
-annotations and form fields are not editable through these tools. Line recognition
-is geometric and can require disabling for unusual layouts. Existing fragmented
-whitespace is normalised when replacing text. Original font shaping, clipping and
-layer membership are not reconstructed for replacement text. Move/resize/rotate
-preserve existing object content. Replacement uses the chosen embedded Windows
-font; it retains the selected text's direction. The on-page typing box is horizontal
-and does not reproduce custom line/character spacing until applied.
-No automatic paragraph reflow, layer-management panel, compression presets,
-printing, page rearrangement, password entry, continuous multi-page canvas or
-text search in this release. Existing PDF layers are retained on saving.
-
-BUILD / PRIVACY
-Windows 10/11 x64, .NET Framework 4.8. No Python/browser needed to run the app.
-Source and installer recipe: https://github.com/DangerousKitty666/VinsPDF
-PDF processing is local. Only Check for updates contacts GitHub; PDF content is
-never uploaded. Rendering/editing run off the UI thread. Unsaved edited pages stay
-loaded for undo and each open tab retains its own document, so memory increases
-with tabs/edits. Retain licenses/ when redistributing. Supplied artwork is excluded
-from the application source license. See the GitHub build checks for validation.
+Performance and privacy
+Windows 10/11 x64, .NET Framework 4.8. PDFium runs locally, no Python or browser is
+required. Only Check for updates contacts GitHub; drawings are not uploaded.
+The cache budget covers cached raster images, not total process memory. Open
+native pages, undo histories, editable content and tabs add memory. Complex first
+renders still take time; cached revisit timings are not first-open timings.
+The application and installer are unsigned. Source and license notices:
+https://github.com/DangerousKitty666/VinsPDF

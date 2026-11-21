@@ -47,6 +47,9 @@ internal sealed partial class PdfEngine : IDisposable {
     }
     public Bitmap Render(int index,int rotation,int width,int height,int x,int y,int pageWidth,int pageHeight,Func<bool> cancelled=null) {
         if(width<1 || height<1 || (long)width*height>24000000) throw new ArgumentException("Render area is too large.");
+        if(cancelled!=null&&cancelled())throw new OperationCanceledException();
+        var cacheArea=new Rectangle(-x,-y,width,height);
+        if(CacheEnabled){var cached=RenderCache.Get(this,index,rotation,pageWidth,pageHeight,cacheArea);if(cached!=null){CacheHits++;return cached;}}
         IntPtr page=Page(index);
         Bitmap image=new Bitmap(width,height,PixelFormat.Format32bppArgb);
         BitmapData data=null; IntPtr bitmap=IntPtr.Zero;
@@ -66,7 +69,7 @@ internal sealed partial class PdfEngine : IDisposable {
                 if(result==3)throw new IOException("PDF rendering failed.");
             } finally { Native.FPDF_RenderPage_Close(page); GC.KeepAlive(callback); }
         } catch { if(bitmap!=IntPtr.Zero) Native.FPDFBitmap_Destroy(bitmap); if(data!=null) image.UnlockBits(data); image.Dispose(); throw; }
-        Native.FPDFBitmap_Destroy(bitmap); image.UnlockBits(data); return image;
+        Native.FPDFBitmap_Destroy(bitmap); image.UnlockBits(data); if(CacheEnabled)RenderCache.Add(this,index,rotation,pageWidth,pageHeight,cacheArea,image); return image;
     }
     public Bitmap Preview(int index,int rotation,int longest,Func<bool> cancelled=null) {
         SizeF s=Sizes[index]; if(rotation%2!=0) s=new SizeF(s.Height,s.Width);
@@ -75,7 +78,7 @@ internal sealed partial class PdfEngine : IDisposable {
         return Render(index,rotation,w,h,0,0,w,h,cancelled);
     }
     public void Close() {
-        ResetEditing();
+        RenderCache.Clear(this); ResetEditing();
         foreach(IntPtr p in pages.Values) Native.FPDF_ClosePage(p);
         pages.Clear(); recent.Clear(); Sizes=null;
         if(document!=IntPtr.Zero) Native.FPDF_CloseDocument(document);

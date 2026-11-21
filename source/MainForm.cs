@@ -31,7 +31,7 @@ internal sealed partial class MainForm : DarkWindow {
     readonly PageCanvas canvas=new PageCanvas();
     readonly PageNavigator navigator=new PageNavigator();
     readonly PageList pages=new PageList();
-    volatile int thumbnailStart,thumbnailEnd;
+    volatile int thumbnailStart,thumbnailEnd,imageEpoch;
     readonly Panel sidebar=new Panel();
     readonly Panel editorDock=new Panel{Dock=DockStyle.Right,Width=236,Visible=false,BackColor=Color.Black};
     readonly Panel documentArea=new Panel{Dock=DockStyle.Fill};
@@ -71,7 +71,7 @@ internal sealed partial class MainForm : DarkWindow {
         Icon=Icon.ExtractAssociatedIcon(Application.ExecutablePath);
         StartPosition=FormStartPosition.CenterScreen; BackColor=Color.Black; ForeColor=Color.FromArgb(224,228,235);
         Font=new Font("Segoe UI",9); KeyPreview=true; AllowDrop=true;
-        var renderer=new ToolStripProfessionalRenderer(new DarkColors()); renderer.RoundedEdges=false;
+        var renderer=new DarkRenderer(); renderer.RoundedEdges=false;
         var menu=new MenuStrip { BackColor=BackColor,ForeColor=ForeColor,Renderer=renderer,Padding=new Padding(8,2,0,2) };
         var file=new ToolStripMenuItem("&File");
         file.DropDownItems.Add(Item("&Open PDF…",delegate { ChooseFile(); },Keys.Control|Keys.O));
@@ -86,12 +86,12 @@ internal sealed partial class MainForm : DarkWindow {
         view.DropDownItems.Add(Item("&Actual size",delegate { canvas.ActualSize(); },Keys.Control|Keys.D1));
         view.DropDownItems.Add(Item("&Page thumbnails",ToggleThumbnails,Keys.F9));
         var help=new ToolStripMenuItem("&Help");
-        help.DropDownItems.Add(Item("Controls & about",delegate { DarkMessage.Show(this,"VinsPDF 0.26 · Viewer + editor\n\nCtrl+O Open · Ctrl+S Save · Ctrl+Shift+S Save As\nCtrl+E Edit mode · Ctrl+Z Undo · Ctrl+Y Redo\nCtrl+0 Fit page · Ctrl+2 Fit width · F9 Thumbnails\nCtrl+wheel Zoom · Middle-drag or Alt+drag Pan\n\nEdit: click text or an image to select. Drag to move.\nDrag the corner to resize; Shift allows free proportions.\nDouble-click text to edit. Delete removes the selection.\nText lines are recognised geometrically. Nested form content is not editable.\nToolbar rotation changes the view. Selection rotation is saved.\nInline text: Ctrl+Enter applies; Esc cancels.","VinsPDF",MessageBoxButtons.OK,MessageBoxIcon.Information); },Keys.None));
+        help.DropDownItems.Add(Item("Controls & about",delegate { DarkMessage.Show(this,"VinsPDF 0.27 · Viewer + editor\n\nCtrl+O Open · Ctrl+S Save · Ctrl+Shift+S Save As\nCtrl+E Edit mode · Ctrl+Z Undo · Ctrl+Y Redo\nCtrl+0 Fit page · Ctrl+2 Fit width · F9 Thumbnails\nCtrl+wheel Zoom · Middle-drag or Alt+drag Pan\n\nEdit: click text or an image to select. Drag to move.\nDrag the corner to resize; Shift allows free proportions.\nDouble-click text to edit. Delete removes the selection.\nText lines are recognised geometrically. Nested form content is not editable.\nToolbar rotation changes the view. Selection rotation is saved.\nInline text: Ctrl+Enter applies; Esc cancels.","VinsPDF",MessageBoxButtons.OK,MessageBoxIcon.Information); },Keys.None));
         menu.Items.AddRange(new ToolStripItem[]{file,view,help}); MainMenuStrip=menu;
         bar.Renderer=renderer; bar.BackColor=BackColor; bar.ForeColor=ForeColor; bar.GripStyle=ToolStripGripStyle.Hidden; bar.Padding=new Padding(3,2,3,2); bar.AutoSize=false; bar.Height=30;
         menu.Items.Clear();
         var appMenu=new ToolStripDropDownButton("☰"); appMenu.DropDownItems.AddRange(new ToolStripItem[]{file,view,help}); bar.Items.Add(appMenu);
-        AddButton("Open","Open a PDF (Ctrl+O)",delegate { ChooseFile(); },false);
+
         bar.Items.Add(new ToolStripSeparator());
         AddButton("◀","Previous page (Page Up)",delegate { Go(-1); },true);
         pageBox.AutoSize=false; pageBox.Width=34; pageBox.BackColor=Color.FromArgb(27,30,35); pageBox.ForeColor=ForeColor; pageBox.BorderStyle=BorderStyle.FixedSingle;
@@ -119,7 +119,7 @@ internal sealed partial class MainForm : DarkWindow {
         pages.Dock=DockStyle.Fill; pages.BackColor=sidebar.BackColor; pages.ForeColor=ForeColor; pages.BorderStyle=BorderStyle.None; pages.DrawMode=DrawMode.OwnerDrawFixed; pages.ItemHeight=112; pages.IntegralHeight=false;
         pages.DrawItem+=DrawPage;pages.ViewportChanged+=delegate{worker.ClearIdle();if(sizes!=null)QueueThumbnails(generation);};
         pages.SelectedIndexChanged+=delegate { if(!selecting && pages.SelectedIndex>=0) Navigate(pages.SelectedIndex); };
-        sidebar.Controls.Add(pages); sidebar.Controls.Add(heading);
+        var headingBar=new Panel{Dock=DockStyle.Top,Height=30};heading.Dock=DockStyle.Fill;var expand=new Button{Text="»",Dock=DockStyle.Right,Width=30,FlatStyle=FlatStyle.Flat,ForeColor=Color.Silver,BackColor=Color.Black};expand.FlatAppearance.BorderSize=0;expand.Click+=delegate{ShowOverview();};headingBar.Controls.Add(heading);headingBar.Controls.Add(expand);sidebar.Controls.Add(pages);sidebar.Controls.Add(headingBar);
         var workspace=new Panel { Dock=DockStyle.Fill }; documentArea.Controls.Add(canvas);workspace.Controls.Add(documentArea); workspace.Controls.Add(sidebar);workspace.Controls.Add(editorDock);navigator.Jump+=delegate(int index){if(index!=pageIndex)Navigate(index);};navigator.Wheel+=canvas.ScrollWheel;
         Controls.Add(workspace); Controls.Add(bar); Controls.Add(strip); InstallTitle();
         canvas.ViewChanged+=delegate { LayoutInline(); if(sizes==null)return; viewVersion++; zoomLabel.Text=canvas.ZoomPercent+"%"; debounce.Stop(); debounce.Start(); };
@@ -175,9 +175,9 @@ internal sealed partial class MainForm : DarkWindow {
     }
     public Action<string> OpenInTab;public Action CloseTab;
     void ChooseFile() { using(var d=new OpenFileDialog { Filter="PDF documents (*.pdf)|*.pdf",Title="Open PDF",CheckFileExists=true }) if(d.ShowDialog(this)==DialogResult.OK){if(OpenInTab!=null)OpenInTab(d.FileName);else OpenFile(d.FileName);} }
-    void ClearImages() { foreach(var b in thumbs.Values)b.Dispose(); thumbs.Clear(); foreach(var b in previews.Values)b.Dispose(); previews.Clear(); previewOrder.Clear(); }
+    void ClearImages() { imageEpoch++; foreach(var b in thumbs.Values)b.Dispose(); thumbs.Clear(); foreach(var b in previews.Values)b.Dispose(); previews.Clear(); previewOrder.Clear(); }
     void CloseDocument() {
-        dirty=false; savedOnce=false; editBusy=false; editorState=new EditState(); canvas.Editing=false; canvas.ClearObjects(); if(editToggle!=null)editToggle.Checked=false;
+        if(overview!=null&&!overview.IsDisposed)overview.Close();uiHiddenLayers.Clear();uiLockedLayers.Clear();dirty=false; savedOnce=false; editBusy=false; editorState=new EditState(); canvas.Editing=false; canvas.ClearObjects(); if(editToggle!=null)editToggle.Checked=false;
         generation++; viewVersion++; debounce.Stop(); worker.ClearPending(); worker.Command(delegate(PdfEngine e) { e.Close(); });
         navigator.SetPage(0,0);sizes=null; rotations=null; currentPath=null; ClearImages(); pages.Items.Clear(); canvas.ClearPage(); canvas.EmptyTitle="A clear view of your PDFs.";
         documentLabel.Text="No document open"; Text="VinsPDF"; pageBox.Text=""; pageTotal.Text="/ —"; zoomLabel.Text="—"; dimensions.Text=""; status.Text="Ready"; EnableDocument(false);
@@ -226,45 +226,46 @@ internal sealed partial class MainForm : DarkWindow {
     void RequestRender() {
         if(sizes==null || !canvas.HasPage || !documentVisible)return;
         int token=generation,version=viewVersion,index=pageIndex,rotation=rotations[index];
-        Rectangle page=canvas.PageRectangle,area=Rectangle.Intersect(page,canvas.ClientRectangle);
+        Rectangle canvasViewport=canvas.ClientRectangle;Rectangle page=canvas.PageRectangle,viewport=canvasViewport; viewport.Inflate(128,128); Rectangle area=Rectangle.Intersect(page,viewport);
         if(area.Width<1 || area.Height<1)return;
         status.Text="Drawing page "+(index+1)+"…";
         worker.Render(delegate(PdfEngine e) {
             if(token!=generation || version!=viewVersion)return;
             var clock=Stopwatch.StartNew();
             try {
-                Bitmap bitmap=e.Render(index,rotation,area.Width,area.Height,page.X-area.X,page.Y-area.Y,page.Width,page.Height,delegate { return token!=generation || version!=viewVersion || !documentVisible; });
+                Rectangle shown=Rectangle.Intersect(page,canvasViewport);Bitmap bitmap=RenderCache.Get(e,index,rotation,page.Width,page.Height,new Rectangle(shown.X-page.X,shown.Y-page.Y,shown.Width,shown.Height));Rectangle painted=area;if(bitmap!=null){painted=shown;}else bitmap=e.Render(index,rotation,area.Width,area.Height,page.X-area.X,page.Y-area.Y,page.Width,page.Height,delegate { return token!=generation || version!=viewVersion || !documentVisible; });
                 long elapsed=clock.ElapsedMilliseconds;
                 Post(delegate {
                     if(token!=generation || version!=viewVersion) { bitmap.Dispose(); return; }
-                    canvas.SetDetail(bitmap,area,page);
+                    canvas.SetDetail(bitmap,painted,page);
                     lastRenderedVersion=version;
-                    if(area==page) {
+                    if(painted==page) {
                         string key=index+":"+rotation;
                         if(!previews.ContainsKey(key)) { previews[key]=(Bitmap)bitmap.Clone(); previewOrder.Enqueue(key); while(previewOrder.Count>3) { string old=previewOrder.Dequeue(); previews[old].Dispose(); previews.Remove(old); } }
                         canvas.SetPreview((Bitmap)bitmap.Clone());
                         if(!thumbs.ContainsKey(index) && rotation==0) { thumbs[index]=new Bitmap(bitmap,new Size(150,Math.Max(1,(int)(150.0*bitmap.Height/bitmap.Width)))); pages.Invalidate(); }
                     }
-                    if(documentVisible&&thumbnailsEnabled){worker.ClearIdle();QueueThumbnails(token);}
-                    status.Text="Page "+(index+1)+" of "+sizes.Length+"  ·  "+elapsed+" ms  ·  "+(canvas.Editing?"Select · Drag to move · Corner to resize · Double-click text":"Ctrl+wheel to zoom / drag to pan");
-                    if(firstPaint) { firstPaint=false; canvas.Update(); Trace("first_page_ms="+openClock.ElapsedMilliseconds); Trace("startup_to_page_ms="+Startup.ElapsedMilliseconds); QueueThumbnails(token); if(V026Directory!=null&&!V026Started){V026Started=true;Start026Test();}else if(EditorTestDirectory!=null)StartEditorUITest(); else if(SelfTestDirectory!=null)StartSelfTest(); else if(SnapshotPath!=null) { testTimer=new Timer(); testTimer.Interval=3500; testTimer.Tick+=delegate { testTimer.Stop(); testTimer.Dispose(); SaveSnapshot(); }; testTimer.Start(); } }
+                    if(documentVisible&&thumbnailsEnabled){worker.ClearIdle();QueueNextPage(token,index);QueueThumbnails(token);}
+                    status.Text="Page "+(index+1)+" of "+sizes.Length+"  ·  "+elapsed+" ms  ·  "+(canvas.Editing?"Select / Move selected / Pan · Double-click text to edit":"Ctrl+wheel to zoom / drag to pan");
+                    if(firstPaint) { firstPaint=false; canvas.Update(); Trace("first_page_ms="+openClock.ElapsedMilliseconds); Trace("startup_to_page_ms="+Startup.ElapsedMilliseconds); QueueThumbnails(token); if(V027Directory!=null&&!V027Started){V027Started=true;Start027Test();}else if(V026Directory!=null&&!V026Started){V026Started=true;Start026Test();}else if(EditorTestDirectory!=null)StartEditorUITest(); else if(SelfTestDirectory!=null)StartSelfTest(); else if(SnapshotPath!=null) { testTimer=new Timer(); testTimer.Interval=3500; testTimer.Tick+=delegate { testTimer.Stop(); testTimer.Dispose(); SaveSnapshot(); }; testTimer.Start(); } }
                 },bitmap);
             } catch(OperationCanceledException) {} catch(Exception ex) { string message=ex.Message; Post(delegate { if(token==generation)status.Text="Could not render page: "+message; },null); }
         });
     }
     void ToggleThumbnails() { sidebar.Visible=!sidebar.Visible; thumbnailsEnabled=sidebar.Visible; worker.ClearIdle(); if(sizes!=null && thumbnailsEnabled)QueueThumbnails(generation); }
     void QueueThumbnails(int token) {
+        int epoch=imageEpoch;
         if(!thumbnailsEnabled || !documentVisible)return;
         thumbnailStart=Math.Max(0,pages.TopIndex-1);thumbnailEnd=Math.Min(sizes.Length,pages.TopIndex+Math.Max(1,pages.Height/pages.ItemHeight)+2);
         for(int i=thumbnailStart;i<thumbnailEnd;i++) { int index=i;
             if(thumbs.ContainsKey(index))continue;
             Action<PdfEngine> job=null;
             job=delegate(PdfEngine e) {
-                if(token!=generation || !thumbnailsEnabled || !documentVisible || index<thumbnailStart || index>=thumbnailEnd)return;
+                if(epoch!=imageEpoch || token!=generation || !thumbnailsEnabled || !documentVisible || index<thumbnailStart || index>=thumbnailEnd)return;
                 try {
                     Bitmap b=e.Preview(index,0,150,delegate { return token!=generation || !thumbnailsEnabled || !documentVisible || index<thumbnailStart || index>=thumbnailEnd || worker.HasUrgent; });
-                    Post(delegate { if(token!=generation || thumbs.ContainsKey(index)) { b.Dispose(); return; } thumbs[index]=b; pages.Invalidate(); },b);
-                } catch(OperationCanceledException) { if(token==generation && thumbnailsEnabled && documentVisible && index>=thumbnailStart && index<thumbnailEnd)worker.Idle(job); } catch { /* An unreadable thumbnail must not prevent opening other pages. */ }
+                    Post(delegate { if(epoch!=imageEpoch || token!=generation || thumbs.ContainsKey(index)) { b.Dispose(); return; } thumbs[index]=b; pages.Invalidate(); },b);
+                } catch(OperationCanceledException) { if(epoch==imageEpoch && token==generation && thumbnailsEnabled && documentVisible && index>=thumbnailStart && index<thumbnailEnd)worker.Idle(job); } catch { /* An unreadable thumbnail must not prevent opening other pages. */ }
             };
             worker.Idle(job);
         }

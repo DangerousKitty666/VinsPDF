@@ -43,7 +43,7 @@ internal sealed partial class MainForm {
         if(sizes==null || editBusy || !FinishInline())return;
         if(!canvas.Editing && twoPages)SetTwoPages(false);
         canvas.Editing=!canvas.Editing; canvas.ClearObjects();
-        if(canvas.Editing) { rotations[pageIndex]=0; Navigate(pageIndex); status.Text="Edit · Click text/image · Drag to move · Corner to resize · Double-click text"; }
+        if(canvas.Editing) { rotations[pageIndex]=0; Navigate(pageIndex); status.Text="Edit · Select a region · Move selected to transform · Double-click text to edit"; }
         else { canvas.Cursor=Cursors.Hand; status.Text="View mode"; }
         if(canvas.Editing)ShowPalette(); else if(palette!=null){palette.Hide();editorDock.Visible=false;}
         UpdateEditorTools(); canvas.Focus();
@@ -52,7 +52,7 @@ internal sealed partial class MainForm {
         if(sizes==null || !canvas.Editing)return;
         int token=generation,index=pageIndex;
         worker.Command(delegate(PdfEngine engine) {
-            try { EditState state=engine.GetObjects(index); Post(delegate { if(token!=generation || index!=pageIndex || !canvas.Editing)return; editorState=state; canvas.SetObjects(state,selectedId); UpdateEditorTools(); },null); }
+            try { EditState state=engine.GetObjects(index); Post(delegate { if(token!=generation || index!=pageIndex || !canvas.Editing)return; editorState=state; canvas.SetObjects(state,selectedId);RefreshLayers(); UpdateEditorTools(); },null); }
             catch(Exception ex) { string message=ex.Message; Post(delegate { if(token==generation)status.Text="Could not prepare editing: "+message; },null); }
         });
     }
@@ -64,7 +64,7 @@ internal sealed partial class MainForm {
             bool applied=false;
             try {
                 int selected=change(engine); applied=true; EditState state=engine.GetObjects(index);
-                Post(delegate { if(token!=generation)return; dirty=true; editBusy=false; editorState=state; ClearImages(); InvalidateEditedPage(index); canvas.SetObjects(state,selected); if(keepSelection!=null)canvas.SelectMembers(keepSelection); UpdateEditorTools(); UpdateDocumentTitle(); RequestRender(); },null);
+                Post(delegate { if(token!=generation)return; dirty=true; editBusy=false; editorState=state; ClearImages(); InvalidateEditedPage(index); canvas.SetObjects(state,selected);RefreshLayers(); if(keepSelection!=null)canvas.SelectMembers(keepSelection); UpdateEditorTools(); UpdateDocumentTitle(); RequestRender(); },null);
             } catch(Exception ex) { string message=ex.Message; Post(delegate { if(token!=generation)return; dirty=dirty||applied; editBusy=false; UpdateEditorTools(); UpdateDocumentTitle(); LoadEditObjects(-1); DarkMessage.Show(this,message,"Edit failed",MessageBoxButtons.OK,MessageBoxIcon.Warning); RequestRender(); },null); }
         });
     }
@@ -77,28 +77,26 @@ internal sealed partial class MainForm {
     void ApplyText(EditObject obj,string value,TextStyle style) {
         PointF position=obj==null?canvas.Normalized(new Point(canvas.Width/2,canvas.Height/2)):new PointF(obj.BaselineX,obj.BaselineY);
         if(obj==null){position.X=Math.Max(.05f,Math.Min(.85f,position.X));position.Y=Math.Max(.05f,Math.Min(.9f,position.Y));}
-        int[] ids=obj==null?new int[0]:obj.Ids;TextStyle copy=style.Copy();ApplyEdit(delegate(PdfEngine e){return e.PutTextBlock(pageIndex,ids,value,copy,position,obj==null?0:obj.Angle);});
+        int[] ids=obj==null?new int[0]:obj.Ids;TextStyle copy=style.Copy();if(obj!=null)copy.BoxWidth=obj.Bounds.Width*canvas.PageSize.Width;ApplyEdit(delegate(PdfEngine e){return e.PutTextBlock(pageIndex,ids,value,copy,position,obj==null?0:obj.Angle);});
     }
     void ShowPalette() {
-        if(palette==null || palette.IsDisposed){palette=new EditorPalette();palette.Command+=PaletteCommand;palette.Highlight.CheckedChanged+=delegate{canvas.HighlightObjects=palette.Highlight.Checked;canvas.Invalidate();};palette.Lines.CheckedChanged+=delegate{if(!FinishInline())return;canvas.GroupLines=palette.Lines.Checked;canvas.SetObjects(editorState,-1);};editorDock.Controls.Add(palette);palette.SetStyle(textStyle);VisibleChanged+=delegate{if(palette!=null&&palette.TopLevel){if(Visible&&canvas.Editing)palette.Show(TopLevelControl as Form??this);else palette.Hide();}};}
-        editorDock.Visible=!palette.TopLevel;palette.Mode(canvas.SelectTool);if(palette.TopLevel)palette.Show(TopLevelControl as Form??this);else palette.Show();
+        if(palette==null || palette.IsDisposed){palette=new EditorPalette();palette.Location=PointToScreen(new Point(Math.Max(0,Width-250),45));palette.Height=Math.Min(640,Screen.FromControl(this).WorkingArea.Height-80);palette.Command+=PaletteCommand;palette.Highlight.CheckedChanged+=delegate{canvas.HighlightObjects=palette.Highlight.Checked;canvas.Invalidate();};palette.Lines.CheckedChanged+=delegate{if(!FinishInline())return;canvas.GroupLines=palette.Lines.Checked;canvas.SetObjects(editorState,-1);};palette.SetStyle(textStyle);VisibleChanged+=delegate{if(palette!=null&&palette.TopLevel){if(Visible&&canvas.Editing){if(!palette.Visible)palette.Show(TopLevelControl as Form??this);}else palette.Hide();}};}
+        editorDock.Visible=false;palette.Mode(canvas.ToolMode);if(!palette.Visible)palette.Show(TopLevelControl as Form??this);RefreshLayers();
     }
-    void TogglePaletteFloat(){
-        if(palette==null)return;palette.Hide();
-        if(!palette.TopLevel){editorDock.Controls.Remove(palette);editorDock.Visible=false;palette.TopLevel=true;palette.Dock=DockStyle.None;palette.EmbeddedTitle(true);palette.Size=new Size(236,Math.Min(760,Math.Max(480,Height-70)));palette.StartPosition=FormStartPosition.Manual;palette.Location=PointToScreen(new Point(Math.Max(0,Width-250),40));palette.ShowInTaskbar=false;palette.Opacity=palette.FloatingOpacity;}
-        else{palette.Owner=null;palette.TopLevel=false;palette.EmbeddedTitle(false);palette.Opacity=1;palette.Dock=DockStyle.Fill;editorDock.Controls.Add(palette);}
-        ShowPalette();
-    }
+    void TogglePaletteFloat(){ShowPalette();}
     void PaletteCommand(string command) {
         if(editBusy)return;
         switch(command){
             case "close":ToggleEditing();break;case "float":TogglePaletteFloat();break;
-            case "select":canvas.SelectTool=true;palette.Mode(true);break;
-            case "hand":if(!FinishInline())return;canvas.SelectTool=false;palette.Mode(false);break;
+            case "select":if(!FinishInline())return;canvas.SetTool(0);palette.Mode(0);break;
+            case "move":if(!FinishInline())return;canvas.SetTool(1);palette.Mode(1);break;
+            case "hand":if(!FinishInline())return;canvas.SetTool(2);palette.Mode(2);break;
             case "addtext":EditText(null);break;case "image":if(FinishInline())ImportImage();break;
             case "edittext":EditText(canvas.CombinedSelection());break;
             case "undo":if(FinishInline())UndoEditor(false);break;case "redo":if(FinishInline())UndoEditor(true);break;
             case "delete":if(FinishInline())DeleteSelection();break;
+            case "colour":palette.ChooseColour();break;
+            case "layerassign":case "layerremove":case "layerrename":case "layervisibility":case "layerlock":case "layerselect":LayerCommand(command);break;
             case "gridapply":palette.ApplyGrid(canvas);break;
             case "stylepreview":textStyle=palette.Style;UpdateInlineFont();break;
             case "fontapply":case "spacingapply":textStyle=palette.Style;if(inlineText!=null)CommitInline();else{var selected=canvas.CombinedSelection();if(selected!=null&&selected.Kind==1)ApplyText(selected,selected.Text,textStyle);}break;
@@ -127,7 +125,7 @@ internal sealed partial class MainForm {
         if(sizes==null || editBusy || !FinishInline() || (isRedo?!editorState.CanRedo:!editorState.CanUndo))return;
         editBusy=true; viewVersion++; UpdateEditorTools(); int token=generation;
         worker.Command(delegate(PdfEngine engine) {
-            try { int changed=engine.UndoEdit(isRedo); Post(delegate { if(token!=generation)return; editBusy=false; dirty=true; if(changed>=0) { ClearImages(); InvalidateEditedPage(changed); if(changed!=pageIndex)Navigate(changed);else RequestRender(); } LoadEditObjects(-1); UpdateEditorTools(); UpdateDocumentTitle(); },null); }
+            try { int changed=engine.UndoEdit(isRedo); Post(delegate { if(token!=generation)return; editBusy=false; dirty=true;uiHiddenLayers.Clear(); if(changed>=0) { ClearImages(); InvalidateEditedPage(changed); if(changed!=pageIndex)Navigate(changed);else RequestRender(); } LoadEditObjects(-1); UpdateEditorTools(); UpdateDocumentTitle(); },null); }
             catch(Exception ex) { string message=ex.Message; Post(delegate { editBusy=false; UpdateEditorTools(); DarkMessage.Show(this,message,"Undo/redo failed"); },null); }
         });
     }
@@ -154,7 +152,7 @@ internal sealed partial class MainForm {
         editBusy=true; viewVersion++; debounce.Stop(); UpdateEditorTools(); status.Text="Saving PDF…"; int token=generation;
         worker.Command(delegate(PdfEngine engine) {
             try { engine.SaveCopy(path); Post(delegate {
-                if(token!=generation)return; currentPath=path; dirty=false; editBusy=false; savedOnce=true; editorState=new EditState();
+                if(token!=generation)return; currentPath=path;uiHiddenLayers.Clear();uiLockedLayers.Clear(); dirty=false; editBusy=false; savedOnce=true; editorState=new EditState();
                 ClearImages(); canvas.ClearObjects(); UpdateDocumentTitle(); UpdateEditorTools(); LoadEditObjects(-1); RequestRender(); status.Text="Saved · "+Path.GetFileName(path);
             },null); }
             catch(Exception ex) { string message=ex.Message; Post(delegate { if(token!=generation)return; editBusy=false; canvas.ClearObjects(); editorState=new EditState(); UpdateEditorTools(); LoadEditObjects(-1); RequestRender(); DarkMessage.Show(this,message,"Save failed",MessageBoxButtons.OK,MessageBoxIcon.Warning); },null); }

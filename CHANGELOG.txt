@@ -1,13 +1,21 @@
-VinsPDF 0.26 — 12 November 2026
-- Single/two-page viewing layouts; left page thumbnails without end arrows.
-- Right-side cascading editor properties; inline text editing with font controls.
-- Edit-mode wheel page lock; undo/redo retains current-page camera position.
-- Rotation handle and numeric component rotation; Shift 15-degree snapping.
-- Immediate scaled reuse of page detail during zoom, delayed sharp refinement.
-- Document tabs with retained edits/history and detachable windows.
-- Per-user Windows installer, automatic PDF registration and icon setup.
-- Check for updates: public GitHub releases, SHA-256 verification, saved-document
-  guard and automatic in-place installer update/restart.
+VinsPDF 0.27 — 21 November 2026
 
-0.25: text-line grouping, grid, multi-selection, floating editor, document icons.
-0.2: text/image editing and saving. 0.1: native PDFium viewer.
+Recommended download: VinsPDF-Setup-0.27.exe. Installer distribution is now standard.
+
+- Memory-limited page cache, idle next-page rendering and cached panning margins.
+- Compact floating editor with Select, Move selected and Pan modes. Selection
+  drags never move objects, even when started over an item.
+- Live grid without Snap/Apply, clearer cascading properties, text colour and
+  left/centre/right alignment; Add text remains inline and repeated panel show
+  is guarded. Removed the redundant Edit text on page command.
+- Rotating selection rectangle, centre pointing-hand cursor, dark menus.
+- Home / Tools / About / + row; drag tabs out to detach; no separate Open or
+  Detach toolbar buttons. Translucent PAGES overview with click-away dismissal.
+- Named editor layers with persistent membership, session hide/show and locks.
+- Combine PDFs, organise/reorder/remove/rotate pages, extract ranges, export
+  original or reduced-size image PDFs, and printing.
+
+Limits: editor layers are page-level text/image groups, not a full PDF optional-
+content editor. Hidden groups are included when saving/exporting. Reduced exports
+flatten text into images. Page-copy tools may not retain document-level bookmarks,
+forms or layer configurations. See README.txt and Performance.txt for validation.

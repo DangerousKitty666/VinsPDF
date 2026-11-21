@@ -11,7 +11,7 @@ internal sealed class RenderWorker {
     readonly Queue<Action<PdfEngine>> idle=new Queue<Action<PdfEngine>>();
     Action<PdfEngine> render,secondary;
     bool stopping;
-    public bool HasUrgent { get { lock(gate)return stopping || render!=null || commands.Count>0; } }
+    public bool HasUrgent { get { lock(gate)return stopping || render!=null || secondary!=null || commands.Count>0; } }
     public RenderWorker() { var t=new Thread(Run); t.IsBackground=true; t.Name="PDF rendering"; t.Start(); }
     public void Command(Action<PdfEngine> action) { lock(gate) { commands.Enqueue(action); Monitor.Pulse(gate); } }
     public void Render(Action<PdfEngine> action) { lock(gate) { render=action; Monitor.Pulse(gate); } }

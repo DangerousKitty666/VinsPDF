@@ -75,7 +75,7 @@ internal sealed partial class PageCanvas : Control {
         if(e.Button==MouseButtons.Left || e.Button==MouseButtons.Middle) { dragging=true; Capture=true; dragStart=e.Location; dragX=panX; dragY=panY; Cursor=Cursors.SizeAll; }
     }
     protected override void OnMouseMove(MouseEventArgs e) { base.OnMouseMove(e); if(EditMouseMove(e))return; if(dragging) { panX=dragX+e.X-dragStart.X; panY=dragY+e.Y-dragStart.Y; Clamp(); Changed(); } }
-    protected override void OnMouseUp(MouseEventArgs e) { base.OnMouseUp(e); if(EditMouseUp(e))return; dragging=false; Capture=false; Cursor=Editing?Cursors.Default:Cursors.Hand; }
+    protected override void OnMouseUp(MouseEventArgs e) { base.OnMouseUp(e); if(EditMouseUp(e))return; dragging=false; Capture=false; Cursor=Editing?(ToolMode==0?Cursors.Cross:ToolMode==1?Cursors.SizeAll:Cursors.Hand):Cursors.Hand; }
     protected override void OnMouseWheel(MouseEventArgs e) {
         if(!HasPage)return;
         if((ModifierKeys&Keys.Control)!=0) Zoom(Math.Pow(1.18,e.Delta/120.0),e.Location);

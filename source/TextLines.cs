@@ -18,7 +18,7 @@ internal static class TextLines {
             List<EditObject> best=null;
             foreach(var row in rows) {
                 var reference=row[0]; float h=Math.Max(item.Bounds.Height,reference.Bounds.Height);
-                if(reference.Color==item.Color && Math.Abs(item.BaselineY-reference.BaselineY)*page.Height<Math.Max(item.DisplayFontSize,reference.DisplayFontSize)*.18f && Math.Min(item.DisplayFontSize,reference.DisplayFontSize)>Math.Max(item.DisplayFontSize,reference.DisplayFontSize)*.75f) { best=row; break; }
+                if(reference.Layer==item.Layer&&reference.Locked==item.Locked&&reference.Color==item.Color && Math.Abs(item.BaselineY-reference.BaselineY)*page.Height<Math.Max(item.DisplayFontSize,reference.DisplayFontSize)*.18f && Math.Min(item.DisplayFontSize,reference.DisplayFontSize)>Math.Max(item.DisplayFontSize,reference.DisplayFontSize)*.75f) { best=row; break; }
             }
             if(best==null) { best=new List<EditObject>();rows.Add(best); } best.Add(item);
         }
@@ -45,7 +45,7 @@ internal static class TextLines {
         }
         string joined=text.ToString();
         if(items.All(o=>o.TextStart>=0 && o.TextEnd>=0) && items[0].SourceText!=null){int start=items.Min(o=>o.TextStart),end=items.Max(o=>o.TextEnd);string span=items[0].SourceText.Substring(start,end-start);if(!span.Contains("\n")&&!span.Contains("\r")&&span.Count(c=>char.IsWhiteSpace(c))>=items.Sum(o=>o.Text.Count(c=>char.IsWhiteSpace(c)))&&span.Count(c=>!char.IsWhiteSpace(c))==items.Sum(o=>o.Text.Count(c=>!char.IsWhiteSpace(c))))joined=span.Trim();}
-        return new EditObject { Id=items[0].Id,Kind=1,Bounds=bounds,Text=System.Text.RegularExpressions.Regex.Replace(joined,@"\s+"," ").Trim(),FontSize=items[0].FontSize,DisplayFontSize=items[0].DisplayFontSize,Color=items[0].Color,Angle=items[0].Angle,BaselineY=items[0].BaselineY,BaselineX=items[0].BaselineX,Members=items.SelectMany(o=>o.Ids).ToArray() };
+        return new EditObject { Id=items[0].Id,Kind=1,Layer=items[0].Layer,Locked=items.Any(o=>o.Locked),Bounds=bounds,Text=System.Text.RegularExpressions.Regex.Replace(joined,@"\s+"," ").Trim(),FontSize=items[0].FontSize,DisplayFontSize=items[0].DisplayFontSize,Color=items[0].Color,Angle=items[0].Angle,BaselineY=items[0].BaselineY,BaselineX=items[0].BaselineX,Members=items.SelectMany(o=>o.Ids).ToArray() };
     }
 }
 }

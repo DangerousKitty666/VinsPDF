@@ -24,6 +24,12 @@ jobs:
           $test = Start-Process ./VinsPDF.exe -ArgumentList '--v026-engine-test work/tests tests/line-fixture.pdf' -Wait -PassThru -WindowStyle Hidden
           Get-Content work/tests/engine-026.txt
           if ($test.ExitCode -ne 0) { throw 'Engine checks failed' }
+          $test = Start-Process ./VinsPDF.exe -ArgumentList '--v027-engine-test work/tests tests/line-fixture.pdf' -Wait -PassThru -WindowStyle Hidden
+          Get-Content work/tests/engine-027.txt
+          if ($test.ExitCode -ne 0) { throw '0.27 engine checks failed' }
+          $test = Start-Process ./VinsPDF.exe -ArgumentList '--v025-test work/tests tests/line-fixture.pdf' -Wait -PassThru -WindowStyle Hidden
+          Get-Content work/tests/advanced-results.txt
+          if ($test.ExitCode -ne 0) { throw 'Editing regression checks failed' }
       - name: Prepare verified installer compiler
         shell: pwsh
         run: |
@@ -41,14 +47,9 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed' }
           $version = (Get-Content release.json | ConvertFrom-Json).version
           ./tests/installer-check.ps1 -Installer "$PWD/work/release/VinsPDF-Setup-$version.exe"
-      - name: Package portable app and checksums
+      - name: Installer checksums
         shell: pwsh
         run: |
-          $version = (Get-Content release.json | ConvertFrom-Json).version
-          New-Item -ItemType Directory -Force work/portable/VinsPDF | Out-Null
-          Copy-Item VinsPDF.exe,VinsPDF.exe.config,pdfium.dll,VinsPDF-document.ico,README.txt,LICENSE.txt -Destination work/portable/VinsPDF
-          Copy-Item licenses -Destination work/portable/VinsPDF/licenses -Recurse
-          Compress-Archive work/portable/VinsPDF -DestinationPath "work/release/VinsPDF-$version-win-x64.zip"
           Get-ChildItem work/release -File | ForEach-Object { "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant())  $($_.Name)" } | Set-Content work/release/SHA256SUMS.txt
       - name: Publish release
         env:

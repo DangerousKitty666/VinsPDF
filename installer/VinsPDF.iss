@@ -1,4 +1,4 @@
-#define AppVersion "0.26"
+#define AppVersion "0.27"
 [Setup]
 AppId={{938C0682-DAEF-4CC9-BCDB-CCB54B76FF2D}
 AppName=VinsPDF
@@ -78,3 +78,4 @@ begin
     end;
   end;
 end;
+

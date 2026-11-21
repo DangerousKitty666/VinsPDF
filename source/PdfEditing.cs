@@ -8,7 +8,7 @@ using System.Text;
 
 namespace VinsPDF {
 internal sealed class EditObject {
-    public int Id,Kind;
+    public int Id,Kind;public string Layer;public bool Locked;
     public RectangleF Bounds;
     public string Text;
     public string GroupKey,LineText;
@@ -17,7 +17,7 @@ internal sealed class EditObject {
     public float FontSize,DisplayFontSize;
     public int[] Members;
     public float Angle,BaselineY,BaselineX;
-    public uint Color;
+    public uint Color=0xff000000;
     public int[] Ids { get { return Members??new int[]{Id}; } }
 }
 internal sealed class EditState {
@@ -29,19 +29,19 @@ internal sealed partial class PdfEngine {
     sealed class Change { public int Page; public Action Undo,Redo; }
     readonly Stack<Change> undo=new Stack<Change>(),redo=new Stack<Change>();
     IntPtr editFont;
-    void ResetEditing() { foreach(var font in extraFonts.Values)Native.FPDFFont_Close(font);extraFonts.Clear();undo.Clear(); redo.Clear(); pinned.Clear(); if(editFont!=IntPtr.Zero) { Native.FPDFFont_Close(editFont); editFont=IntPtr.Zero; } }
+    void ResetEditing() { hiddenLayers.Clear();lockedLayers.Clear();layerHiddenObjects.Clear(); foreach(var font in extraFonts.Values)Native.FPDFFont_Close(font);extraFonts.Clear();undo.Clear(); redo.Clear(); pinned.Clear(); if(editFont!=IntPtr.Zero) { Native.FPDFFont_Close(editFont); editFont=IntPtr.Zero; } }
     void Check(bool okay,string message) { if(!okay)throw new IOException(message); }
     void Generate(int index) { Check(Native.FPDFPage_GenerateContent(Page(index))!=0,"Unable to generate edited page content."); }
     void Commit(int index,Action back,Action forward) {
         // Render edited native objects directly. Generate content only at save;
         // repeated regeneration can reorder content across original PDF streams.
-        pinned.Add(index); forward();
+        RenderCache.Clear(this); pinned.Add(index); forward();
         undo.Push(new Change { Page=index,Undo=back,Redo=forward }); redo.Clear();
     }
     public int UndoEdit(bool isRedo) {
         var source=isRedo?redo:undo; var dest=isRedo?undo:redo;
         if(source.Count==0)return -1;
-        Change c=source.Peek(); if(isRedo)c.Redo(); else c.Undo(); source.Pop(); dest.Push(c); return c.Page;
+        RestoreLayerVisibility();RenderCache.Clear(this); Change c=source.Peek(); if(isRedo)c.Redo(); else c.Undo(); source.Pop(); dest.Push(c); return c.Page;
     }
     public EditState GetObjects(int index) {
         var result=new EditState { CanUndo=undo.Count>0,CanRedo=redo.Count>0 };
@@ -65,7 +65,7 @@ internal sealed partial class PdfEngine {
                     if(size>2 && size<2000000) { IntPtr buffer=Marshal.AllocHGlobal((int)size); try { Native.FPDFTextObj_GetText(obj,textPage,buffer,size); item.Text=(Marshal.PtrToStringUni(buffer)??"").Replace('\u00a0',' '); } finally { Marshal.FreeHGlobal(buffer); } }
                 }
                 if(kind==1){if(item.LineText!=null)item.Text=item.LineText;else if(item.Text.Length==0 && item.Bounds.Height<.00001f)item.Text=" ";}
-                result.Objects.Add(item);
+                item.Layer=ObjectLayer(obj);item.Locked=lockedLayers.Contains(LayerKey(index,item.Layer));result.Objects.Add(item);
             }
             var source=new StringBuilder();int chars=Native.FPDFText_CountChars(textPage);
             if(chars<2000000)for(int charIndex=0;charIndex<chars;charIndex++){uint code=Native.FPDFText_GetUnicode(textPage,charIndex);if(code==0||code>0x10ffff||(code>=0xd800&&code<=0xdfff))continue;int start=source.Length;source.Append(code==160?" ":char.ConvertFromUtf32((int)code));EditObject item;if(textObjects.TryGetValue(Native.FPDFText_GetTextObject(textPage,charIndex),out item)){if(item.TextStart<0)item.TextStart=start;item.TextEnd=source.Length;}}
@@ -144,7 +144,7 @@ internal sealed partial class PdfEngine {
         bool serialized=false;
         try {
             using(var stream=new FileStream(temp,FileMode.CreateNew,FileAccess.Write,FileShare.None)) {
-                foreach(int pageIndex in pinned)Generate(pageIndex);
+                RestoreLayerVisibility();foreach(int pageIndex in pinned)Generate(pageIndex);
                 Exception failure=null;
                 Native.WriteBlock callback=delegate(IntPtr self,IntPtr data,uint count) { try { byte[] bytes=new byte[count]; Marshal.Copy(data,bytes,0,(int)count); stream.Write(bytes,0,bytes.Length); return 1; } catch(Exception ex) { failure=ex; return 0; } };
                 var writer=new Native.FileWrite { Version=1,Callback=Marshal.GetFunctionPointerForDelegate(callback) };

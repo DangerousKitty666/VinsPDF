@@ -10,6 +10,7 @@ internal sealed class TextStyle {
     public string Family="Arial";
     public float Size=14,LineHeight=1.2f,ParagraphGap=6,CharacterSpacing=0;
     public bool Bold,Italic;
+    public Color? Ink; public int Alignment; public float BoxWidth;
     public TextStyle Copy() { return (TextStyle)MemberwiseClone(); }
 }
 internal sealed partial class PdfEngine {
@@ -52,7 +53,7 @@ internal sealed partial class PdfEngine {
         if(style.Size<1 || style.Size>500 || style.LineHeight<.5f || style.LineHeight>5 || style.CharacterSpacing< -2 || style.CharacterSpacing>30)throw new IOException("Invalid text settings.");
         IntPtr page=Page(index),font=FontForStyle(style); var added=new List<IntPtr>();var previous=new List<IntPtr>(); int first=-1;
         foreach(int id in oldIds.Distinct())previous.Add(ObjectAt(index,id));
-        uint r=0,g=0,b=0,a=255;if(previous.Count>0)Native.FPDFPageObj_GetFillColor(previous[0],out r,out g,out b,out a);
+        uint r=0,g=0,b=0,a=255;if(previous.Count>0)Native.FPDFPageObj_GetFillColor(previous[0],out r,out g,out b,out a);if(style.Ink.HasValue){Color ink=style.Ink.Value;r=ink.R;g=ink.G;b=ink.B;a=ink.A;}
         try {
             using(var scratch=new Bitmap(1,1))using(var graphics=Graphics.FromImage(scratch))using(var measureFont=new Font(style.Family,style.Size,(style.Bold?FontStyle.Bold:FontStyle.Regular)|(style.Italic?FontStyle.Italic:FontStyle.Regular),GraphicsUnit.Pixel)) {
                 var measureFormat=(StringFormat)StringFormat.GenericTypographic.Clone();measureFormat.FormatFlags|=StringFormatFlags.MeasureTrailingSpaces;
@@ -63,7 +64,7 @@ internal sealed partial class PdfEngine {
                     string lineKey="VinsPDF.Line."+Guid.NewGuid().ToString("N");
                     if(Math.Abs(style.CharacterSpacing)<.001f)fragments.Add(line);
                     else {var en=StringInfo.GetTextElementEnumerator(line);while(en.MoveNext())fragments.Add(en.GetTextElement());}
-                    float advance=0;
+                    float measured=graphics.MeasureString(line,measureFont,int.MaxValue,measureFormat).Width+Math.Max(0,fragments.Count-1)*style.CharacterSpacing;float advance=style.Alignment==0?0:(Math.Max(measured,style.BoxWidth)-measured)*(style.Alignment==1?.5f:1f);
                     foreach(string fragment in fragments) {
                         IntPtr obj=Native.FPDFPageObj_CreateTextObj(document,font,style.Size);Check(obj!=IntPtr.Zero,"Could not create text.");
                         bool inserted=false;
@@ -76,7 +77,7 @@ internal sealed partial class PdfEngine {
                             PointF origin=ToPdf(page,pos.X,pos.Y),px=ToPdf(page,pos.X+(float)cos/Sizes[index].Width,pos.Y+(float)sin/Sizes[index].Height),py=ToPdf(page,pos.X+(float)sin/Sizes[index].Width,pos.Y-(float)cos/Sizes[index].Height);
                             double lx=Math.Sqrt(Math.Pow(px.X-origin.X,2)+Math.Pow(px.Y-origin.Y,2)),ly=Math.Sqrt(Math.Pow(py.X-origin.X,2)+Math.Pow(py.Y-origin.Y,2));
                             Native.FPDFPageObj_Transform(obj,(px.X-origin.X)/lx,(px.Y-origin.Y)/lx,(py.X-origin.X)/ly,(py.Y-origin.Y)/ly,origin.X,origin.Y);Native.FPDFPageObj_SetFillColor(obj,r,g,b,a);
-                            Native.FPDFPage_InsertObject(page,obj);inserted=true;Native.FPDFPageObj_SetIsActive(obj,0);added.Add(obj);if(first<0)first=Native.FPDFPage_CountObjects(page)-1;
+                            if(previous.Count>0)SetObjectLayer(obj,ObjectLayer(previous[0]));Native.FPDFPage_InsertObject(page,obj);inserted=true;Native.FPDFPageObj_SetIsActive(obj,0);added.Add(obj);if(first<0)first=Native.FPDFPage_CountObjects(page)-1;
                         } finally {if(!inserted)Native.FPDFPageObj_Destroy(obj);}
                         advance+=graphics.MeasureString(fragment,measureFont,int.MaxValue,measureFormat).Width+style.CharacterSpacing;
                     }
