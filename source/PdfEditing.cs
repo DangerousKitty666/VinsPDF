@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace VinsPDF {
 internal sealed class EditObject {
-    public TextStyle Style;public int Id,Kind;public string Layer;public bool Locked;
+    public string BlockKey;public bool IsParagraph;public TextStyle Style;public int Id,Kind;public string Layer;public bool Locked;
     public RectangleF Bounds;
     public string Text;
     public string GroupKey,LineText;
@@ -58,7 +58,7 @@ internal sealed partial class PdfEngine {
                 PointF a=ToDisplay(page,l,b),z=ToDisplay(page,r,t);
                 var item=new EditObject { Id=i,Kind=kind,Bounds=RectangleF.FromLTRB(Math.Min(a.X,z.X),Math.Min(a.Y,z.Y),Math.Max(a.X,z.X),Math.Max(a.Y,z.Y)),Text="" };
                 if(kind==1) {
-                    textObjects[obj]=item;item.Style=ReadStyle(obj);
+                    textObjects[obj]=item;item.Style=ReadStyle(obj);item.BlockKey=FindMarkName(obj,"VinsPDF.Block.");
                     for(uint markIndex=0;markIndex<Native.FPDFPageObj_CountMarks(obj);markIndex++){IntPtr mark=Native.FPDFPageObj_GetMark(obj,markIndex);uint length;Native.FPDFPageObjMark_GetName(mark,IntPtr.Zero,0,out length);if(length>2 && length<2048){IntPtr buffer=Marshal.AllocHGlobal((int)length);try{if(Native.FPDFPageObjMark_GetName(mark,buffer,length,out length)!=0){string name=Marshal.PtrToStringUni(buffer);if(name!=null&&name.StartsWith("VinsPDF.Line.")){item.GroupKey=name;uint required;Native.FPDFPageObjMark_GetParamStringValue(mark,"FragmentText",IntPtr.Zero,0,out required);if(required>2 && required<2000000){IntPtr textBuffer=Marshal.AllocHGlobal((int)required);try{if(Native.FPDFPageObjMark_GetParamStringValue(mark,"FragmentText",textBuffer,required,out required)!=0){try{item.LineText=Encoding.UTF8.GetString(Convert.FromBase64String(Marshal.PtrToStringUni(textBuffer)));}catch(FormatException){}}}finally{Marshal.FreeHGlobal(textBuffer);}}}}}finally{Marshal.FreeHGlobal(buffer);}}}
                     Native.FPDFTextObj_GetFontSize(obj,out item.FontSize);
                     Native.Matrix matrix; if(Native.FPDFPageObj_GetMatrix(obj,out matrix)!=0) { item.DisplayFontSize=(float)Math.Sqrt(matrix.C*matrix.C+matrix.D*matrix.D)*item.FontSize; PointF p1=ToDisplay(page,matrix.E,matrix.F),p2=ToDisplay(page,matrix.E+matrix.A,matrix.F+matrix.B); item.BaselineY=p1.Y;item.BaselineX=p1.X; item.Angle=(float)(Math.Atan2((p2.Y-p1.Y)*Sizes[index].Height,(p2.X-p1.X)*Sizes[index].Width)*180/Math.PI); }

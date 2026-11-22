@@ -84,7 +84,7 @@ internal sealed partial class PdfEngine : IDisposable {
         if(document!=IntPtr.Zero) Native.FPDF_CloseDocument(document);
         document=IntPtr.Zero;
     }
-    public void Dispose() {lock(NativeGate){if(disposed)return;disposed=true;Close();if(--users==0)Native.FPDF_DestroyLibrary();}}
+    public void Dispose() {lock(NativeGate){if(disposed)return;disposed=true;Close();CleanupScratch();if(--users==0)Native.FPDF_DestroyLibrary();}}
 }
 internal static partial class Native {
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] internal delegate int PauseCallback(IntPtr pause);

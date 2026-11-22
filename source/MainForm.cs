@@ -86,7 +86,7 @@ internal sealed partial class MainForm : DarkWindow {
         view.DropDownItems.Add(Item("&Actual size",delegate { canvas.ActualSize(); },Keys.Control|Keys.D1));
         view.DropDownItems.Add(Item("&Page thumbnails",ToggleThumbnails,Keys.F9));
         var help=new ToolStripMenuItem("&Help");
-        help.DropDownItems.Add(Item("Controls & about",delegate { DarkMessage.Show(this,"VinsPDF 0.27 · Viewer + editor\n\nCtrl+O Open · Ctrl+S Save · Ctrl+Shift+S Save As\nCtrl+E Edit mode · Ctrl+Z Undo · Ctrl+Y Redo\nCtrl+0 Fit page · Ctrl+2 Fit width · F9 Thumbnails\nCtrl+wheel Zoom · Middle-drag or Alt+drag Pan\n\nEdit: click text or an image to select. Drag to move.\nDrag the corner to resize; Shift allows free proportions.\nDouble-click text to edit. Delete removes the selection.\nText lines are recognised geometrically. Nested form content is not editable.\nToolbar rotation changes the view. Selection rotation is saved.\nInline text: Ctrl+Enter applies; Esc cancels.","VinsPDF",MessageBoxButtons.OK,MessageBoxIcon.Information); },Keys.None));
+        help.DropDownItems.Add(Item("Controls & about",delegate { DarkMessage.Show(this,"VinsPDF 0.29 · Viewer + editor\n\nCtrl+O Open · Ctrl+S Save · Ctrl+Shift+S Save As\nCtrl+E Edit mode · Ctrl+Z Undo · Ctrl+Y Redo\nCtrl+0 Fit page · Ctrl+2 Fit width · F9 Thumbnails · F11 Full screen · Ctrl+F Search\nCtrl+wheel Zoom · Middle-drag or Alt+drag Pan\n\nEdit: select text or an image. Drag its centre handle to move.\nDrag the corner to resize; Shift allows free proportions.\nDouble-click text to edit. Delete removes the selection.\nText blocks are recognised geometrically. Nested form content is not editable.\nToolbar rotation changes the view. Selection rotation is saved.\nInline text: Ctrl+Enter applies; Esc cancels.","VinsPDF",MessageBoxButtons.OK,MessageBoxIcon.Information); },Keys.None));
         menu.Items.AddRange(new ToolStripItem[]{file,view,help}); MainMenuStrip=menu;
         bar.Renderer=renderer; bar.BackColor=BackColor; bar.ForeColor=ForeColor; bar.GripStyle=ToolStripGripStyle.Hidden; bar.Padding=new Padding(3,2,3,2); bar.AutoSize=false; bar.Height=30;
         menu.Items.Clear();
@@ -94,8 +94,8 @@ internal sealed partial class MainForm : DarkWindow {
 
         bar.Items.Add(new ToolStripSeparator());
         AddButton("◀","Previous page (Page Up)",delegate { Go(-1); },true);
-        pageBox.AutoSize=false; pageBox.Width=34; pageBox.BackColor=Color.FromArgb(27,30,35); pageBox.ForeColor=ForeColor; pageBox.BorderStyle=BorderStyle.FixedSingle;
-        pageBox.KeyDown+=delegate(object s,KeyEventArgs e) { if(e.KeyCode==Keys.Enter) { int n; if(int.TryParse(pageBox.Text,out n)) Navigate(n-1); else pageBox.Text=(pageIndex+1).ToString(); e.SuppressKeyPress=true; canvas.Focus(); } };
+        pageBox.AutoSize=false; pageBox.Width=30;pageBox.TextBox.TextAlign=HorizontalAlignment.Center;pageBox.TextBox.Font=new Font("Segoe UI",8);pageBox.Margin=new Padding(1,2,1,2); pageBox.BackColor=Color.FromArgb(27,30,35); pageBox.ForeColor=ForeColor; pageBox.BorderStyle=BorderStyle.FixedSingle;
+        pageBox.KeyDown+=delegate(object s,KeyEventArgs e) { if(e.KeyCode==Keys.Enter) { JumpToLabel(); e.SuppressKeyPress=true; canvas.Focus(); } };
         bar.Items.Add(pageBox); documentTools.Add(pageBox); bar.Items.Add(pageTotal);
         AddButton("▶","Next page (Page Down)",delegate { Go(1); },true);
         bar.Items.Add(new ToolStripSeparator());
@@ -110,7 +110,7 @@ internal sealed partial class MainForm : DarkWindow {
         scope.DropDownItems.Add(Item("Current page",delegate { rotateAll=false; scope.Text="Current page"; },Keys.None));
         scope.DropDownItems.Add(Item("Whole document",delegate { rotateAll=true; scope.Text="Whole document"; },Keys.None)); scope.AutoSize=false; scope.Width=110;
         scope.BackColor=Color.FromArgb(12,12,12); scope.ForeColor=ForeColor; bar.Items.Add(scope); documentTools.Add(scope);
-        InstallEditorToolbar();
+        InstallEditorToolbar();InstallSearchToolbar();
         var strip=new StatusStrip { Renderer=renderer,BackColor=BackColor,ForeColor=Color.FromArgb(176,185,197),SizingGrip=true };
         status.Spring=true; status.TextAlign=ContentAlignment.MiddleLeft; strip.Items.Add(status); strip.Items.Add(dimensions);
         documentLabel.Dock=DockStyle.Top; documentLabel.Height=35; documentLabel.Padding=new Padding(14,8,12,0); documentLabel.BackColor=Color.Black; documentLabel.ForeColor=ForeColor; documentLabel.Text="No document open"; documentLabel.AutoEllipsis=true;
@@ -119,16 +119,16 @@ internal sealed partial class MainForm : DarkWindow {
         pages.Dock=DockStyle.Fill; pages.BackColor=sidebar.BackColor; pages.ForeColor=ForeColor; pages.BorderStyle=BorderStyle.None; pages.DrawMode=DrawMode.OwnerDrawFixed; pages.ItemHeight=112; pages.IntegralHeight=false;
         pages.DrawItem+=DrawPage;pages.ViewportChanged+=delegate{worker.ClearIdle();if(sizes!=null)QueueThumbnails(generation);};
         pages.SelectedIndexChanged+=delegate { if(!selecting && pages.SelectedIndex>=0) Navigate(pages.SelectedIndex); };
-        var headingBar=new Panel{Dock=DockStyle.Top,Height=30};heading.Dock=DockStyle.Fill;var expand=new Button{Text="»",Dock=DockStyle.Right,Width=30,FlatStyle=FlatStyle.Flat,ForeColor=Color.Silver,BackColor=Color.Black};expand.FlatAppearance.BorderSize=0;expand.Click+=delegate{ShowOverview();};headingBar.Controls.Add(heading);headingBar.Controls.Add(expand);sidebar.Controls.Add(pages);sidebar.Controls.Add(headingBar);
+        var headingBar=new Panel{Dock=DockStyle.Top,Height=30};heading.Dock=DockStyle.Fill;expandPages=new Button{Text="»",Dock=DockStyle.Right,Width=30,FlatStyle=FlatStyle.Flat,ForeColor=Color.Silver,BackColor=Color.Black};expandPages.FlatAppearance.BorderSize=0;expandPages.Click+=delegate{ShowOverview();};headingBar.Controls.Add(heading);headingBar.Controls.Add(expandPages);sidebar.Controls.Add(pages);sidebar.Controls.Add(headingBar);
         var workspace=new Panel { Dock=DockStyle.Fill }; documentArea.Controls.Add(canvas);workspace.Controls.Add(documentArea); workspace.Controls.Add(sidebar);workspace.Controls.Add(editorDock);navigator.Jump+=delegate(int index){if(index!=pageIndex)Navigate(index);};navigator.Wheel+=canvas.ScrollWheel;
-        Controls.Add(workspace); Controls.Add(bar); Controls.Add(strip); InstallTitle();
+        Controls.Add(workspace); Controls.Add(searchBar); Controls.Add(bar); Controls.Add(strip); InstallTitle();
         canvas.ViewChanged+=delegate { LayoutInline(); if(sizes==null)return; viewVersion++; zoomLabel.Text=canvas.ZoomPercent+"%"; debounce.Stop(); debounce.Start(); };
         canvas.PageStep+=ScrollPage; canvas.OpenRequested+=ChooseFile;
         debounce.Interval=130; debounce.Tick+=delegate { debounce.Stop(); RequestRender(); };
         DragEnter+=delegate(object s,DragEventArgs e) { if(e.Data.GetDataPresent(DataFormats.FileDrop)) e.Effect=DragDropEffects.Copy; };
         DragDrop+=delegate(object s,DragEventArgs e) { var paths=e.Data.GetData(DataFormats.FileDrop) as string[]; if(paths!=null)foreach(string path in paths){if(OpenInTab!=null)OpenInTab(path);else OpenFile(path);} };
         Shown+=delegate { TryDarkTitle(); Trace("window_shown_ms="+Startup.ElapsedMilliseconds); if(initialPath!=null) OpenFile(initialPath); else if(SnapshotPath!=null) BeginInvoke((Action)SaveSnapshot); };
-        FormClosed+=delegate {if(palette!=null){palette.AllowClose=true;palette.Close();} closing=true; generation++; worker.Stop(); debounce.Dispose(); ClearImages(); };
+        FormClosed+=delegate {if(palette!=null){palette.AllowClose=true;palette.Close();} ClearUndoViews();closing=true; generation++; worker.Stop(); debounce.Dispose(); ClearImages(); };
         FormClosing+=delegate(object sender,FormClosingEventArgs e) { if(!approvedClose&&!ConfirmDiscard())e.Cancel=true; };
         VisibleChanged+=delegate{documentVisible=Visible;worker.ClearIdle();if(Visible&&sizes!=null){RequestRender();RenderSecond();QueueThumbnails(generation);}};InstallLayout();InstallWheelRouter();EnableDocument(false);
     }
@@ -177,9 +177,9 @@ internal sealed partial class MainForm : DarkWindow {
     void ChooseFile() { using(var d=new OpenFileDialog { Filter="PDF documents (*.pdf)|*.pdf",Title="Open PDF",CheckFileExists=true }) if(d.ShowDialog(this)==DialogResult.OK){if(OpenInTab!=null)OpenInTab(d.FileName);else OpenFile(d.FileName);} }
     void ClearImages() { imageEpoch++; foreach(var b in thumbs.Values)b.Dispose(); thumbs.Clear(); foreach(var b in previews.Values)b.Dispose(); previews.Clear(); previewOrder.Clear(); }
     void CloseDocument() {
-        if(overview!=null&&!overview.IsDisposed)overview.Close();uiHiddenLayers.Clear();uiLockedLayers.Clear();dirty=false; savedOnce=false; editBusy=false; editorState=new EditState(); canvas.Editing=false; canvas.ClearObjects(); if(editToggle!=null)editToggle.Checked=false;
+        if(overview!=null&&!overview.IsDisposed)overview.Close();uiHiddenLayers.Clear();uiLockedLayers.Clear();dirty=false;structurePending=false;ClearUndoViews(); savedOnce=false; editBusy=false; editorState=new EditState(); canvas.Editing=false; canvas.ClearObjects(); if(editToggle!=null)editToggle.Checked=false;
         generation++; viewVersion++; debounce.Stop(); worker.ClearPending(); worker.Command(delegate(PdfEngine e) { e.Close(); });
-        navigator.SetPage(0,0);sizes=null; rotations=null; currentPath=null; ClearImages(); pages.Items.Clear(); canvas.ClearPage(); canvas.EmptyTitle="A clear view of your PDFs.";
+        navigator.SetPage(0,0);searchEpoch++;searchHits.Clear();activeHit=-1;canvas.SearchBoxes=canvas.ActiveSearchBoxes=new RectangleF[0];canvas.MarkGlyphs.Clear();canvas.MarkMode=false;if(markButton!=null)markButton.Checked=false;pageLabels=null;sizes=null; rotations=null; currentPath=null; ClearImages(); pages.Items.Clear(); canvas.ClearPage(); canvas.EmptyTitle="A clear view of your PDFs.";
         documentLabel.Text="No document open"; Text="VinsPDF"; pageBox.Text=""; pageTotal.Text="/ —"; zoomLabel.Text="—"; dimensions.Text=""; status.Text="Ready"; EnableDocument(false);
     }
     void OpenFile(string path) {
@@ -189,11 +189,11 @@ internal sealed partial class MainForm : DarkWindow {
         canvas.EmptyTitle="Opening your PDF…"; canvas.Invalidate(); documentLabel.Text=Path.GetFileName(path); status.Text="Opening document…";
         worker.Command(delegate(PdfEngine e) {
             try {
-                e.Open(path); SizeF[] result=(SizeF[])e.Sizes.Clone(); long ms=openClock.ElapsedMilliseconds;
+                e.Open(path); SizeF[] result=(SizeF[])e.Sizes.Clone();string[] labels=e.PageLabels(); long ms=openClock.ElapsedMilliseconds;
                 Post(delegate {
                     if(token!=generation)return;
-                    sizes=result; rotations=new int[sizes.Length]; pageIndex=0;
-                    pages.BeginUpdate(); for(int i=0;i<sizes.Length;i++)pages.Items.Add("Page "+(i+1)); pages.EndUpdate();
+                    sizes=result;pageLabels=labels; rotations=new int[sizes.Length]; pageIndex=0;
+                    pages.BeginUpdate(); for(int i=0;i<sizes.Length;i++)pages.Items.Add("Page "+PageLabel(i)); pages.EndUpdate();
                     pageTotal.Text="/ "+sizes.Length; Text=Path.GetFileName(path)+" — VinsPDF";
                     documentLabel.Text=Path.GetFileName(path)+"    /    "+sizes.Length+" pages    /    "+(new FileInfo(path).Length/1000000.0).ToString("0.0")+" MB";
                     EnableDocument(true); status.Text="Opened in "+ms+" ms · Drawing first page…"; Trace("open_ms="+ms);
@@ -204,7 +204,7 @@ internal sealed partial class MainForm : DarkWindow {
     }
     void Navigate(int index) {
         if(sizes==null || editBusy || !FinishInline())return; canvas.ClearObjects(); index=Math.Max(0,Math.Min(sizes.Length-1,index));
-        pageIndex=index;navigator.SetPage(index,sizes.Length); pageBox.Text=(index+1).ToString(); selecting=true; pages.SelectedIndex=index; selecting=false;
+        pageIndex=index;navigator.SetPage(index,sizes.Length); pageBox.Text=PageLabel(index);pageBox.ToolTipText="Page "+PageLabel(index)+" ("+(index+1)+" of "+sizes.Length+") · #number jumps by position"; selecting=true; pages.SelectedIndex=index; selecting=false;
         if(canvas.Editing)rotations[index]=0;
         SizeF s=sizes[index]; int r=rotations[index]; if(r%2!=0)s=new SizeF(s.Height,s.Width);
         string key=index+":"+r; Bitmap image; Bitmap preview=null;
@@ -212,7 +212,7 @@ internal sealed partial class MainForm : DarkWindow {
         else if(thumbs.TryGetValue(index,out image)) { preview=(Bitmap)image.Clone(); if(r!=0)preview.RotateFlip((RotateFlipType)r); }
         canvas.SetPage(s,preview); dimensions.Text=(sizes[index].Width*25.4/72).ToString("0")+" × "+(sizes[index].Height*25.4/72).ToString("0")+" mm  |  View "+(r*90)+"°";
         if(canvas.Editing) { rotations[index]=0; LoadEditObjects(-1); }
-        debounce.Stop(); RequestRender();RenderSecond();
+        UpdateSearchOverlay();LoadMarkGlyphs();debounce.Stop(); RequestRender();RenderSecond();
     }
     void ScrollPage(int delta){if(sizes==null||editBusy||canvas.Editing)return;int next=pageIndex+delta;if(next<0||next>=sizes.Length)return;Navigate(next);canvas.AlignScrollEdge(delta>0);}
     void Go(int delta) { Navigate(pageIndex+delta); }
@@ -246,8 +246,8 @@ internal sealed partial class MainForm : DarkWindow {
                         if(!thumbs.ContainsKey(index) && rotation==0) { thumbs[index]=new Bitmap(bitmap,new Size(150,Math.Max(1,(int)(150.0*bitmap.Height/bitmap.Width)))); pages.Invalidate(); }
                     }
                     if(documentVisible&&thumbnailsEnabled){worker.ClearIdle();QueueNextPage(token,index);QueueThumbnails(token);}
-                    status.Text="Page "+(index+1)+" of "+sizes.Length+"  ·  "+elapsed+" ms  ·  "+(canvas.Editing?"Select / Move selected / Pan · Double-click text to edit":"Ctrl+wheel to zoom / drag to pan");
-                    if(firstPaint) { firstPaint=false; canvas.Update(); Trace("first_page_ms="+openClock.ElapsedMilliseconds); Trace("startup_to_page_ms="+Startup.ElapsedMilliseconds); QueueThumbnails(token); if(V028Directory!=null&&!V028Started){V028Started=true;Start028Test();}else if(V027Directory!=null&&!V027Started){V027Started=true;Start027Test();}else if(V026Directory!=null&&!V026Started){V026Started=true;Start026Test();}else if(EditorTestDirectory!=null)StartEditorUITest(); else if(SelfTestDirectory!=null)StartSelfTest(); else if(SnapshotPath!=null) { testTimer=new Timer(); testTimer.Interval=3500; testTimer.Tick+=delegate { testTimer.Stop(); testTimer.Dispose(); SaveSnapshot(); }; testTimer.Start(); } }
+                    status.Text="Page "+(index+1)+" of "+sizes.Length+"  ·  "+elapsed+" ms  ·  "+(canvas.Editing?"Select / Pan · Double-click text to edit":"Ctrl+wheel to zoom / drag to pan");
+                    if(firstPaint) { firstPaint=false; canvas.Update(); Trace("first_page_ms="+openClock.ElapsedMilliseconds); Trace("startup_to_page_ms="+Startup.ElapsedMilliseconds); QueueThumbnails(token); if(V029Directory!=null&&!V029Started){V029Started=true;Start029Test();}else if(V028Directory!=null&&!V028Started){V028Started=true;Start028Test();}else if(V027Directory!=null&&!V027Started){V027Started=true;Start027Test();}else if(V026Directory!=null&&!V026Started){V026Started=true;Start026Test();}else if(EditorTestDirectory!=null)StartEditorUITest(); else if(SelfTestDirectory!=null)StartSelfTest(); else if(SnapshotPath!=null) { testTimer=new Timer(); testTimer.Interval=3500; testTimer.Tick+=delegate { testTimer.Stop(); testTimer.Dispose(); SaveSnapshot(); }; testTimer.Start(); } }
                 },bitmap);
             } catch(OperationCanceledException) {} catch(Exception ex) { string message=ex.Message; Post(delegate { if(token==generation)status.Text="Could not render page: "+message; },null); }
         });
@@ -283,11 +283,11 @@ internal sealed partial class MainForm : DarkWindow {
             e.Graphics.DrawImage(b,target);
             if(rotated!=null)rotated.Dispose();
         } else { using(var brush=new SolidBrush(Color.FromArgb(58,61,67)))e.Graphics.FillRectangle(brush,bounds); TextRenderer.DrawText(e.Graphics,(e.Index+1).ToString(),Font,bounds,Color.FromArgb(149,158,172),TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter); }
-        TextRenderer.DrawText(e.Graphics,"Page "+(e.Index+1)+(rotations!=null && rotations[e.Index]!=0?"  ·  "+rotations[e.Index]*90+"°":""),Font,new Rectangle(e.Bounds.X,e.Bounds.Y+86,e.Bounds.Width,21),selected?Color.FromArgb(164,208,243):ForeColor,TextFormatFlags.HorizontalCenter);
+        TextRenderer.DrawText(e.Graphics,"Page "+PageLabel(e.Index)+(rotations!=null && rotations[e.Index]!=0?"  ·  "+rotations[e.Index]*90+"°":""),Font,new Rectangle(e.Bounds.X,e.Bounds.Y+86,e.Bounds.Width,21),selected?Color.FromArgb(164,208,243):ForeColor,TextFormatFlags.HorizontalCenter);
         if(selected)using(var pen=new Pen(Color.FromArgb(107,167,217),2))e.Graphics.DrawRectangle(pen,e.Bounds.X+2,e.Bounds.Y+2,e.Bounds.Width-5,e.Bounds.Height-5);
     }
     protected override bool ProcessCmdKey(ref Message msg,Keys key) {
-        if(InlineKey(key))return true; if(inlineText!=null&&inlineText.Focused)return base.ProcessCmdKey(ref msg,key);
+        if(key==Keys.F11){var shell=TopLevelControl as TabWindow;if(shell!=null)shell.ToggleFullScreen();return true;}if(key==(Keys.Control|Keys.F)){ShowSearch();return true;}if(key==Keys.F3||key==(Keys.Shift|Keys.F3)){NextSearch(key==Keys.F3?1:-1);return true;}if(InlineKey(key))return true; if(inlineText!=null&&inlineText.Focused)return base.ProcessCmdKey(ref msg,key);
         if(EditorShortcut(key))return true;
         if(!pageBox.Focused) {
             if(key==Keys.PageDown) { Go(1); return true; }

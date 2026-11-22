@@ -42,8 +42,8 @@ internal sealed partial class MainForm {
     void ToggleEditing() {
         if(sizes==null || editBusy || !FinishInline())return;
         if(!canvas.Editing && twoPages)SetTwoPages(false);
-        canvas.Editing=!canvas.Editing; canvas.ClearObjects();
-        if(canvas.Editing) { rotations[pageIndex]=0; Navigate(pageIndex); status.Text="Edit · Select a region · Move selected to transform · Double-click text to edit"; }
+        canvas.MarkMode=false;markButton.Checked=false;canvas.Editing=!canvas.Editing; canvas.ClearObjects();
+        if(canvas.Editing) { rotations[pageIndex]=0; Navigate(pageIndex); status.Text="Edit · Select a region · Drag selection handles to transform · Double-click text to edit"; }
         else { canvas.Cursor=Cursors.Hand; status.Text="View mode"; }
         if(canvas.Editing)ShowPalette(); else if(palette!=null){palette.Hide();editorDock.Visible=false;}
         UpdateEditorTools(); canvas.Focus();
@@ -59,13 +59,13 @@ internal sealed partial class MainForm {
     void ApplyEdit(Func<PdfEngine,int> change,int[] keepSelection=null) {
         if(sizes==null || editBusy)return;
         editBusy=true; viewVersion++; debounce.Stop(); UpdateEditorTools(); int index=pageIndex,token=generation;
-        status.Text="Applying edit…";
+        bool editing=canvas.Editing;UndoView before=canvas.CaptureView(index,editorState);status.Text="Applying edit…";
         worker.Command(delegate(PdfEngine engine) {
             bool applied=false;
             try {
-                int selected=change(engine); applied=true; EditState state=engine.GetObjects(index);
-                Post(delegate { if(token!=generation)return; dirty=true; editBusy=false; editorState=state; ClearImages(); InvalidateEditedPage(index); canvas.SetObjects(state,selected);RefreshLayers(); if(keepSelection!=null)canvas.SelectMembers(keepSelection); UpdateEditorTools(); UpdateDocumentTitle(); RequestRender(); },null);
-            } catch(Exception ex) { string message=ex.Message; Post(delegate { if(token!=generation)return; dirty=dirty||applied; editBusy=false; UpdateEditorTools(); UpdateDocumentTitle(); LoadEditObjects(-1); DarkMessage.Show(this,message,"Edit failed",MessageBoxButtons.OK,MessageBoxIcon.Warning); RequestRender(); },null); }
+                int selected=change(engine); applied=true; EditState state=editing?engine.GetObjects(index):engine.HistoryState();
+                Post(delegate { if(token!=generation){before.Dispose();return;}PushUndoView(before);dirty=true; editBusy=false; editorState=state; ClearImages(); InvalidateEditedPage(index); canvas.SetObjects(state,selected);RefreshLayers(); if(keepSelection!=null)canvas.SelectMembers(keepSelection); UpdateEditorTools(); UpdateDocumentTitle();InvalidateTextIndex(); RequestRender(); },null);
+            } catch(Exception ex) { string message=ex.Message; Post(delegate { if(token!=generation){before.Dispose();return;} if(applied)PushUndoView(before);else before.Dispose();dirty=dirty||applied; editBusy=false; UpdateEditorTools(); UpdateDocumentTitle(); LoadEditObjects(-1); DarkMessage.Show(this,message,"Edit failed",MessageBoxButtons.OK,MessageBoxIcon.Warning); RequestRender(); },null); }
         });
     }
     void InvalidateEditedPage(int index) {
@@ -78,7 +78,7 @@ internal sealed partial class MainForm {
         if(obj!=null&&obj.Style!=null&&obj.Style.ListKind>0)value=System.Text.RegularExpressions.Regex.Replace(value,@"(?m)^\s*(?:[•\-]\s+|\d+(?:\.\d+)*\.\s+)","");
         PointF position=obj==null?canvas.Normalized(new Point(canvas.Width/2,canvas.Height/2)):new PointF(obj.BaselineX,obj.BaselineY);
         if(obj==null){position.X=Math.Max(.05f,Math.Min(.85f,position.X));position.Y=Math.Max(.05f,Math.Min(.9f,position.Y));}
-        int[] ids=obj==null?new int[0]:obj.Ids;TextStyle copy=style.Copy();if(obj!=null)copy.BoxWidth=obj.Bounds.Width*canvas.PageSize.Width;ApplyEdit(delegate(PdfEngine e){return e.PutTextBlock(pageIndex,ids,value,copy,position,obj==null?0:obj.Angle);});
+        int[] ids=obj==null?new int[0]:obj.Ids;TextStyle copy=style.Copy();if(obj!=null){copy.BoxWidth=obj.IsParagraph&&obj.Style!=null?obj.Style.BoxWidth:obj.Bounds.Width*canvas.PageSize.Width;copy.Wrap=obj.IsParagraph||copy.Wrap;copy.BlockKey=obj.BlockKey??copy.BlockKey;}ApplyEdit(delegate(PdfEngine e){return e.PutTextBlock(pageIndex,ids,value,copy,position,obj==null?0:obj.Angle);});
     }
     void ShowPalette() {
         if(palette==null || palette.IsDisposed){palette=new EditorPalette();palette.Location=PointToScreen(new Point(Math.Max(0,Width-250),45));palette.Command+=PaletteCommand;palette.Highlight.CheckedChanged+=delegate{canvas.HighlightObjects=palette.Highlight.Checked;canvas.Invalidate();};palette.Lines.CheckedChanged+=delegate{if(!FinishInline())return;canvas.GroupLines=palette.Lines.Checked;canvas.SetObjects(editorState,-1);};palette.SetStyle(textStyle);VisibleChanged+=delegate{if(palette!=null&&palette.TopLevel){if(Visible&&canvas.Editing){if(!palette.Visible)palette.Show(TopLevelControl as Form??this);}else palette.Hide();}};}
@@ -96,7 +96,7 @@ internal sealed partial class MainForm {
             case "edittext":EditText(canvas.CombinedSelection());break;
             case "undo":if(FinishInline())UndoEditor(false);break;case "redo":if(FinishInline())UndoEditor(true);break;
             case "delete":if(FinishInline())DeleteSelection();break;
-            case "highlightcolour":palette.ChooseHighlight();break;
+            
             case "colour":palette.ChooseColour();break;
             case "layerassign":case "layerremove":case "layerrename":case "layervisibility":case "layerlock":case "layerselect":LayerCommand(command);break;
             case "gridapply":palette.ApplyGrid(canvas);break;
@@ -123,20 +123,13 @@ internal sealed partial class MainForm {
             } catch(Exception ex) { DarkMessage.Show(this,ex.Message,"Cannot import image"); }
         }
     }
-    void UndoEditor(bool isRedo) {
-        if(sizes==null || editBusy || !FinishInline() || (isRedo?!editorState.CanRedo:!editorState.CanUndo))return;
-        editBusy=true; viewVersion++; UpdateEditorTools(); int token=generation;
-        worker.Command(delegate(PdfEngine engine) {
-            try { int changed=engine.UndoEdit(isRedo); Post(delegate { if(token!=generation)return; editBusy=false; dirty=true;uiHiddenLayers.Clear(); if(changed>=0) { ClearImages(); InvalidateEditedPage(changed); if(changed!=pageIndex)Navigate(changed);else RequestRender(); } LoadEditObjects(-1); UpdateEditorTools(); UpdateDocumentTitle(); },null); }
-            catch(Exception ex) { string message=ex.Message; Post(delegate { editBusy=false; UpdateEditorTools(); DarkMessage.Show(this,message,"Undo/redo failed"); },null); }
-        });
-    }
+    void UndoEditor(bool isRedo) {FastUndo(isRedo);}
     void UpdateDocumentTitle() { Text=(currentPath==null?"":Path.GetFileName(currentPath)+(dirty?" *":"")+" — ")+"VinsPDF"; }
     public bool CanCloseDocument(){return ConfirmDiscard();}
     bool ConfirmDiscard() {
         if(editBusy) { status.Text="Please wait for the current edit or save to finish."; return false; }
         if(!dirty&&inlineText==null)return true;
-        using(var dialog=new SaveChangesDialog(Path.GetFileName(currentPath))){var answer=dialog.ShowDialog(TopLevelControl as Form??this);if(answer==DialogResult.No){CancelInline();return true;}if(answer!=DialogResult.Yes)return false;}
+        using(var dialog=new SaveChangesDialog(Path.GetFileName(currentPath),structurePending)){var answer=dialog.ShowDialog(TopLevelControl as Form??this);if(answer==DialogResult.No){CancelInline();return true;}if(answer!=DialogResult.Yes)return false;}
         string target=currentPath;
         if(!savedOnce)using(var picker=new SaveFileDialog{Filter="PDF document|*.pdf",Title="Save changes",FileName=Path.GetFileNameWithoutExtension(currentPath)+"-edited.pdf",InitialDirectory=Path.GetDirectoryName(currentPath),OverwritePrompt=true,AddExtension=true,DefaultExt="pdf"}){if(picker.ShowDialog(TopLevelControl as Form??this)!=DialogResult.OK)return false;target=picker.FileName;}
         return SaveBeforeClose(target);
@@ -156,10 +149,10 @@ internal sealed partial class MainForm {
         editBusy=true; viewVersion++; debounce.Stop(); UpdateEditorTools(); status.Text="Saving PDF…"; int token=generation;
         worker.Command(delegate(PdfEngine engine) {
             try { engine.SaveCopy(path); Post(delegate {
-                if(token!=generation)return; currentPath=path;uiHiddenLayers.Clear();uiLockedLayers.Clear(); dirty=false; editBusy=false; savedOnce=true; editorState=new EditState();
+                if(token!=generation)return; currentPath=path;uiHiddenLayers.Clear();uiLockedLayers.Clear(); dirty=false;structurePending=false;ClearUndoViews(); editBusy=false; savedOnce=true; editorState=new EditState();
                 ClearImages(); canvas.ClearObjects(); UpdateDocumentTitle(); UpdateEditorTools(); LoadEditObjects(-1); RequestRender(); status.Text="Saved · "+Path.GetFileName(path);
             },null); }
-            catch(Exception ex) { string message=ex.Message; Post(delegate { if(token!=generation)return; editBusy=false; canvas.ClearObjects(); editorState=new EditState(); UpdateEditorTools(); LoadEditObjects(-1); RequestRender(); DarkMessage.Show(this,message,"Save failed",MessageBoxButtons.OK,MessageBoxIcon.Warning); },null); }
+            catch(Exception ex) { string message=ex.Message; Post(delegate { if(token!=generation)return; editBusy=false; ClearUndoViews(); canvas.ClearObjects(); editorState=new EditState(); UpdateEditorTools(); LoadEditObjects(-1); RequestRender(); DarkMessage.Show(this,message,"Save failed",MessageBoxButtons.OK,MessageBoxIcon.Warning); },null); }
         });
     }
     bool EditorShortcut(Keys key) {

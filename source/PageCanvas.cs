@@ -63,36 +63,30 @@ internal sealed partial class PageCanvas : Control {
     public void PanBy(float x,float y) { panX+=x; panY+=y; Clamp(); Changed(); }
     double DeviceDpiScale() { using(Graphics g=CreateGraphics()) return g.DpiX/72.0; }
     void Clamp() {
-        float maxX=Math.Max(0,(float)(PageSize.Width*Scale-Width)/2+36);
-        float maxY=Math.Max(0,(float)(PageSize.Height*Scale-Height)/2+36);
+        float maxX=PageSize.Width*Scale<=Width?0:Math.Max(0,(float)(PageSize.Width*Scale-Width)/2+36);
+        float maxY=PageSize.Height*Scale<=Height?0:Math.Max(0,(float)(PageSize.Height*Scale-Height)/2+36);
         panX=Math.Max(-maxX,Math.Min(maxX,panX)); panY=Math.Max(-maxY,Math.Min(maxY,panY));
     }
     void Changed() { Invalidate(); if(ViewChanged!=null) ViewChanged(); }
     protected override void OnMouseDown(MouseEventArgs e) {
         base.OnMouseDown(e); Focus();
-        if(!HasPage) { if(e.Button==MouseButtons.Left && OpenRequested!=null) OpenRequested(); return; }
-        if(EditMouseDown(e))return;
+        if(!HasPage) { if(e.Button==MouseButtons.Left && HomeLogoRectangle.Contains(e.Location) && OpenRequested!=null) OpenRequested(); return; }
+        if(MarkDown(e)||EditMouseDown(e))return;
         if(e.Button==MouseButtons.Left || e.Button==MouseButtons.Middle) { dragging=true; Capture=true; dragStart=e.Location; dragX=panX; dragY=panY; Cursor=Cursors.SizeAll; }
     }
-    protected override void OnMouseMove(MouseEventArgs e) { base.OnMouseMove(e); if(EditMouseMove(e))return; if(dragging) { panX=dragX+e.X-dragStart.X; panY=dragY+e.Y-dragStart.Y; Clamp(); Changed(); } }
-    protected override void OnMouseUp(MouseEventArgs e) { base.OnMouseUp(e); if(EditMouseUp(e))return; dragging=false; Capture=false; Cursor=Editing?(ToolMode==0?Cursors.Cross:ToolMode==1?Cursors.SizeAll:Cursors.Hand):Cursors.Hand; }
+    protected override void OnMouseMove(MouseEventArgs e) { base.OnMouseMove(e); if(MarkMove(e)||EditMouseMove(e))return; if(dragging) { panX=dragX+e.X-dragStart.X; panY=dragY+e.Y-dragStart.Y; Clamp(); Changed(); } }
+    protected override void OnMouseUp(MouseEventArgs e) { base.OnMouseUp(e); if(MarkUp(e)||EditMouseUp(e))return; dragging=false; Capture=false; Cursor=Editing?(ToolMode==0?Cursors.Cross:ToolMode==1?Cursors.SizeAll:Cursors.Hand):Cursors.Hand; }
     protected override void OnMouseWheel(MouseEventArgs e) {
         if(!HasPage)return;
         if((ModifierKeys&Keys.Control)!=0) Zoom(Math.Pow(1.18,e.Delta/120.0),e.Location);
         else ScrollWheel(e.Delta);
     }
-    public void ScrollWheel(int delta) {if(!HasPage)return;float old=panY;panY+=delta*.65f;Clamp();if(Math.Abs(panY-old)<.1f || PageSize.Height*Scale<=Height-24){if(!Editing && PageStep!=null)PageStep(delta<0?1:-1);}else Changed();}
-    public void AlignScrollEdge(bool top) {float maxY=Math.Max(0,(float)(PageSize.Height*Scale-Height)/2+12);panY=top?maxY:-maxY;Changed();}
+    public void ScrollWheel(int delta) {if(!HasPage)return;if(PageSize.Height*Scale<=Height){panY=0;if(!Editing&&delta!=0&&PageStep!=null)PageStep(delta<0?1:-1);return;}float old=panY;panY+=delta*.65f;Clamp();if(Math.Abs(panY-old)<.1f || PageSize.Height*Scale<=Height-24){if(!Editing && PageStep!=null)PageStep(delta<0?1:-1);}else Changed();}
+    public void AlignScrollEdge(bool top) {float maxY=PageSize.Height*Scale<=Height?0:Math.Max(0,(float)(PageSize.Height*Scale-Height)/2+12);panY=top?maxY:-maxY;Changed();}
     protected override void OnMouseEnter(EventArgs e) {base.OnMouseEnter(e);if(Enabled && Form.ActiveForm==FindForm())Focus();}
     protected override void OnPaint(PaintEventArgs e) {
         base.OnPaint(e); Graphics g=e.Graphics;
-        if(!HasPage) {
-            using(var title=new Font("Segoe UI",23,FontStyle.Regular)) using(var sub=new Font("Segoe UI",11)) {
-                TextRenderer.DrawText(g,"VinsPDF",sub,new Rectangle(0,Height/2-100,Width,35),Color.FromArgb(125,180,226),TextFormatFlags.HorizontalCenter);
-                TextRenderer.DrawText(g,EmptyTitle,title,new Rectangle(0,Height/2-50,Width,50),Color.FromArgb(229,232,238),TextFormatFlags.HorizontalCenter);
-                TextRenderer.DrawText(g,"Open a PDF   ·   Ctrl+O   ·   or drop a file here",sub,new Rectangle(0,Height/2+12,Width,30),Color.FromArgb(161,167,179),TextFormatFlags.HorizontalCenter);
-            } return;
-        }
+        if(!HasPage){PaintHome(g);return;}
         Rectangle p=PageRectangle;
         using(var shadow=new SolidBrush(Color.FromArgb(15,16,19))) g.FillRectangle(shadow,p.X+5,p.Y+6,p.Width,p.Height);
         g.FillRectangle(Brushes.White,p);
@@ -103,7 +97,7 @@ internal sealed partial class PageCanvas : Control {
             g.DrawImage(detail,target);
         }
         using(var pen=new Pen(Color.FromArgb(70,73,79))) g.DrawRectangle(pen,p);
-        PaintSelection(g);
+        PaintSelection(g);PaintTextOverlays(g);
     }
     protected override void Dispose(bool disposing) { if(disposing) { SetPreview(null); ClearDetail(); } base.Dispose(disposing); }
 }

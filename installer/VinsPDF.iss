@@ -1,4 +1,4 @@
-#define AppVersion "0.28"
+#define AppVersion "0.29"
 [Setup]
 AppId={{938C0682-DAEF-4CC9-BCDB-CCB54B76FF2D}
 AppName=VinsPDF
@@ -27,6 +27,7 @@ CreateUninstallRegKey=not TestInstall
 [Files]
 Source: "..\VinsPDF.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\VinsPDF.exe.config"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\qpdf\*"; DestDir: "{app}\qpdf"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\pdfium.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\VinsPDF-document.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\README.txt"; DestDir: "{app}"; Flags: ignoreversion

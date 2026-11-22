@@ -26,6 +26,7 @@ internal class DarkWindow : Form {
         b.FlatAppearance.BorderSize=0; b.FlatAppearance.MouseOverBackColor=Color.FromArgb(40,40,40); b.Click+=delegate { action(); }; title.Controls.Add(b);
     }
     public void EmbeddedTitle(bool show){title.Visible=show;Resizable=show;}
+    protected void SetTitleVisible(bool show){title.Visible=show;}
     protected void InstallTitle() { Controls.Add(title); }
     protected void HideMinMax() {foreach(Control c in title.Controls)if(c is Button && c.Text!="×")c.Visible=false;}
     protected override void WndProc(ref Message m) {

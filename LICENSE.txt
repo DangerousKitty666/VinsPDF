@@ -21,5 +21,5 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 This license covers the original VinsPDF source code. The user-supplied cat
-artwork (including its converted Windows icon) is excluded. PDFium and its
+artwork (including its converted Windows icon) is excluded. The supplied About GIF is also excluded. QPDF, PDFium and their
 third-party components retain their own licenses, supplied in licenses/.

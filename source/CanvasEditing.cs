@@ -15,8 +15,8 @@ internal sealed partial class PageCanvas {
  public event Action<float> ObjectRotated;bool rotating;float rotateStart,rotateDelta;
  bool objectDrag,marquee; int resizeHandle=-1; Point objectStart,marqueeEnd; RectangleF startBounds,dragBounds; EditObject moving;
  List<EditObject> rawObjects=new List<EditObject>();
- public void SelectMembers(int[] ids){Selection=TextLines.Group(rawObjects.Where(o=>ids.Contains(o.Id)).ToList(),PageSize,GroupLines);Selected=Selection.FirstOrDefault();NotifySelection();}
- public void SetObjects(EditState state,int selectedId) {rawObjects=state.Objects;Objects=TextLines.Group(state.Objects,PageSize,GroupLines);Selected=Objects.Find(o=>o.Ids.Contains(selectedId));Selection.Clear();if(Selected!=null)Selection.Add(Selected);objectDrag=marquee=false;NotifySelection();}
+ public void SelectMembers(int[] ids){Selection=TextParagraphs.Group(TextLines.Group(rawObjects.Where(o=>ids.Contains(o.Id)).ToList(),PageSize,GroupLines),PageSize,GroupLines);Selected=Selection.FirstOrDefault();NotifySelection();}
+ public void SetObjects(EditState state,int selectedId) {rawObjects=state.Objects;Objects=TextParagraphs.Group(TextLines.Group(state.Objects,PageSize,GroupLines),PageSize,GroupLines);Selected=Objects.Find(o=>o.Ids.Contains(selectedId));Selection.Clear();if(Selected!=null)Selection.Add(Selected);objectDrag=marquee=false;NotifySelection();}
  public void ClearObjects() {Objects.Clear();Selection.Clear();Selected=null;objectDrag=marquee=false;NotifySelection();}
  void NotifySelection() {Cursor=Editing?(ToolMode==0?Cursors.Cross:ToolMode==1?Cursors.SizeAll:Cursors.Hand):Cursors.Hand;Invalidate();if(SelectionChanged!=null)SelectionChanged(Selected);}
  public EditObject CombinedSelection() {

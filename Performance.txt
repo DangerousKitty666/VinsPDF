@@ -1,39 +1,44 @@
-VinsPDF 0.28 validation — 21 November 2026
+VinsPDF 0.29 validation — 22 November 2026
 
-Test documents: current user-approved A012 (15 pages, 54.6 MB) and A014
-(24 pages, 62.1 MB). Originals were not modified or uploaded.
+Current user-approved A012: 15 pages, 54.6 MB. A014: 24 pages, 62.1 MB.
+All 39 pages rendered. Original hashes remained unchanged; drawings/screenshots
+were not uploaded. First-page pixels match 0.28.
 
-All 39 pages rendered successfully. At 1400-pixel preview size, median first
-page-render time across each document was 1316 ms (A012) and 1181 ms (A014).
-The slowest pages took 6202 ms and 4930 ms. Cached repeat renders were under
-1 ms; the first A014 revisit after cache eviction took 1636 ms. Zoom viewport
-renders took 498 ms and 920 ms. These are local observations, not controlled
-cold-start benchmarks or guarantees; caches were not cleared and brief UI tests
-ran during part of the rendering run. No speedup claim is based on this run.
-First-page preview pixels match 0.27 on both drawings.
+Local observations, not controlled cold-start measurements or guarantees:
+                          A012             A014
+Native document open      6.4 ms           1.5 ms
+Median first render       1306 ms          1161 ms (all pages, 1400 px)
+Slowest page render       6127 ms          4899 ms
+Zoom viewport render      501 ms           859 ms
+UI startup to first page  2289 ms          2149 ms
+Undo immediate repaint    23 ms            24 ms
+Undo UI completion        ~1093 ms         ~1093 ms (150-ms polling interval)
+All-page FRAME search     2178 ms          938 ms; 46 matches each
+Fast editable export      392 ms           411 ms
 
-Both drawings passed grouped line editing, fonts/spacing/header-footer changes,
-save/reopen and preservation of page counts, media/crop boxes, rotations and
-original layer names. The 0.25, 0.26 and 0.27 engine regressions pass.
+Most cached repeats were below 1 ms; A014's first repeat after cache eviction
+took 1727 ms. Undo reuses recent image/object snapshots; native work can finish
+after repaint. Cache misses require rendering. Fast export barely shrank these
+already compressed drawings. Thorough compression is optional and can take
+minutes. Both modes retain editable text and preserve image quality.
 
-New engine checks cover linked underline/strike/highlight shapes, text style
-persistence, movement/rotation/delete/undo, lists, wrapping, justification,
-PNG/JPEG/TIFF/BMP dimensions and greyscale, reduced PDF export, page ranges,
-reordering/rotation and rejection of rasters above the 24-megapixel limit.
+0.25–0.28 engine regressions passed. Large-file checks cover line editing,
+headers/footers, save/reopen and page-count/size/all-page search preservation.
+0.29 checks cover search/case/rectangles, highlight render/undo/redo/save, text-block
+recognition, paragraph reflow/breaks, rotation reading order and persisted grouping,
+editable compression, page labels, page order and deferred original-file saving.
+Independent PDF parsing checks metadata, form values, retained bookmark targets,
+page labels, highlight quads and native paragraph text on synthetic files.
 
-WinForms event tests exercise the compact floating panel, inline frame resizing,
-Select-mode centre movement/resize/rotation, body marquee, unchanged camera on
-undo, Save/Don't save/Cancel, save failure/recovery, thumbnail drag order and
-asynchronous organiser previews. Captured dialogs, palette, scrollbar and PDF
-renders were visually reviewed. These are internal event tests/captures, not
-exhaustive physical-input, high-DPI, multi-monitor or printer tests.
+WinForms event tests exercise F11/restore, wheel turns, search navigation, viewer
+highlights, wrapping through the font panel, quick undo/redo with a fixed camera,
+palette opacity, overview placement, tool dialogs, Home logo clicks, filename
+tooltips, tab x closure and deferred saving. Screenshots and PDF renders were
+visually reviewed. About uses a 20-frame GIF. These are internal event tests and
+render comparisons, not exhaustive physical-input, high-DPI, multi-monitor or
+printer tests.
 
-Local installer checks use an isolated folder without changing the user's
-registration. GitHub's clean Windows runner checks full per-user installation,
-PDF association/icon registration, replacement in place and uninstall before
-publishing. See the release Actions run for the final result.
-
-Limits: mixed formatting within an item is not supported; applied text is stored
-as separate lines. Layer groups are not full PDF optional-content authoring.
-Page-copy tools may omit document-level features; reduced PDF/image exports
-flatten pages. See README.txt for controls and the complete scope.
+Local installer tests use an isolated folder without changing the user's app or
+associations. GitHub's clean Windows runner checks full installation, associations,
+icons, replacement in place and uninstall before publishing. Runtime dependencies
+are pinned and checksum-verified. See the release Actions run for final results.

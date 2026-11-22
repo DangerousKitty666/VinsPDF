@@ -1,81 +1,87 @@
-VinsPDF 0.28 — 21 November 2026
+VinsPDF 0.29 — 22 November 2026
 
-Install VinsPDF-Setup-0.28.exe (the standard download). The installer registers
-PDF Open with / Default Apps, shortcuts and an uninstaller for the current user.
-About > Check for updates downloads, verifies and runs future installers in place.
+Install VinsPDF-Setup-0.29.exe, or choose About > Check for updates. Setup installs
+per user with PDF associations, shortcuts and uninstall. Updates replace the
+installed app after download verification.
 
-Viewing and navigation
-- Shared 96 MB rendered-page cache; cached revisits and panning within an already
-  rendered margin avoid another native render. Next-page preparation runs idle.
-- Home, Tools, About and + followed by document tabs. + / Ctrl+O opens files.
-  Drag a tab out of the tab strip to move it into a separate window. Right-click
-  or middle-click closes tabs. Home opens the empty viewer without closing PDFs.
-- Layout: single or two pages. F9: left thumbnails. The » button beside PAGES
-  opens a translucent, scrollable overview. Select a page or click outside to close.
-- Wheel scrolls; Ctrl+wheel zooms. Editing locks wheel navigation to one page.
+Viewing
+- Click the original Home logo, + or Ctrl+O to open. Tabs have filename tooltips
+  and an x; drag a tab outside the strip to move it into a separate window.
+- Layout: single/two pages. F11: full screen. F9: left thumbnails. PAGES » opens
+  a translucent three-column overview beside the button. Select a page or click
+  outside to dismiss it.
+- Page labels use PDF metadata (e.g. i, ii, 1, 2). Enter a label to jump, or #5
+  for physical page 5. The total is the physical count. Printed numbering without
+  PDF labels is not inferred from artwork.
+- Wheel scrolls zoomed pages; each notch turns a page when it fits vertically.
+  Editing locks wheel page changes. Ctrl+wheel zooms. Ctrl+0 fits page; Ctrl+2
+  fits width. Middle-drag / Alt+drag pans.
+- Search / Ctrl+F highlights matches. F3 / Shift+F3 or arrows navigate; Aa matches
+  case. Results arrive progressively, up to 5,000 per search. Search needs text,
+  not scanned/outlined letters. OCR is not included.
+- Highlight works outside the editor: drag across text to add a yellow PDF
+  annotation. Ctrl+Z undoes and Ctrl+S saves. Saved annotations are displayed;
+  this is not a general editor for existing annotations.
 
 Editing
-- A compact floating panel: drag EDIT to reposition. Display sets opacity.
-- Select draws a selection rectangle, including drags over an object body.
-  Drag the selected centre point to move, edge/corner handles to resize, or the
-  circular handle to rotate. These controls work in Select and Move selected.
-- Move selected moves/resizes/rotates an existing selection. Eight handles resize;
-  corners preserve proportions unless Shift is held. The circular handle rotates
-  with a green rectangle preview; Shift constrains it to 15-degree increments.
-- Pan moves the view. Middle-drag / Alt+drag also pan. The selection centre shows
-  a pointing-hand cursor in both selection modes.
-- Add text types directly on the page; double-click existing text to edit it.
-  Resize the typing box using its blue border handles; narrower boxes wrap words.
-  Font/text: family, size, bold, italic, underline, strike, highlight, colour,
-  left/centre/right/justified alignment, bullets, numbering and nested lists.
-  For nested lists use Tab to indent the beginning of a line.
-  Spacing controls characters, line height and paragraph gaps (blank lines).
-  Ctrl+Enter / Apply commits text; Esc cancels. Formatting applies to the whole
-  item. Applied text is stored as selectable lines; mixed styles inside one item
-  are not supported. Existing drawing text is grouped conservatively.
-- Grid appears immediately when checked; spacing and visibility update live.
-  Grid is a viewing aid, is not exported, and does not snap objects.
-- Add image imports PNG/JPEG/BMP/TIFF. Undo/redo retains the current-page camera.
-- Layers are named editor groups for top-level text and images on each page.
-  Assign selection creates/uses a name; Rename and Ungroup manage membership.
-  Names persist in saved PDFs. Visibility and locking are session editing aids:
-  saved/exported PDFs include all non-deleted objects. This is not a full editor
-  for pre-existing PDF optional-content layers or nested CAD geometry.
+- Ctrl+E opens the compact floating panel at 90% opacity. Drag EDIT to move it;
+  Display adjusts opacity. Sections expand inside the panel.
+- Select draws a marquee even over an item. Drag a selected centre handle to
+  move, edge/corner handles to resize, or the circular handle to rotate. Corners
+  preserve proportions unless Shift is held; Shift rotation uses 15° steps.
+  Pan moves the view. The Move selected tile has been removed.
+- Double-click existing text or add text to type on the page. The thinner blue
+  frame resizes. Font/text: family, size, bold/italic/underline/strike, colour and
+  left/centre/right/justified alignment. Spacing sets characters, lines and
+  paragraph gaps. Apply / Ctrl+Enter commits; Esc cancels. Marker and list controls
+  are removed. Formatting applies to the whole item; mixed styles are unsupported.
+- Similarly styled, aligned horizontal body text and nearby paragraphs group into
+  one box. Paragraph breaks and wrapping survive font changes, saving and rotation.
+  Text reflows inside that box; unrelated boxes/pages do not automatically move.
+  Turn off Recognise paragraphs for individual objects. Recognition is geometric
+  and cannot perfectly infer every PDF's structure.
+- Images: PNG/JPEG/BMP/TIFF. Grid updates live and is neither exported nor snapped.
+  Headers/footers and named editor layers remain available. Layer names persist;
+  visibility/locks are session aids, and saved PDFs include non-deleted groups.
+  This is not full optional-content layer authoring or nested CAD geometry editing.
+- Undo preserves the camera. Recent matching view snapshots repaint immediately;
+  the cache is limited to 32 MB per document. Evicted/changed views need rendering.
+  Native work may finish after repaint.
 
-Tools
-- Combine files: select PDFs, order them and create a new combined PDF.
-- Organise pages: drag thumbnail cards to reorder, remove or rotate pages, then
-  save a new PDF. Ctrl+Left/Right also moves the selected card; Delete removes it.
-- Extract pages: ranges and ordered lists such as 1,3,5-8 or 5-1.
-- Export PDF / images: editable PDF, reduced-size image PDF, PNG, JPEG, TIFF or
-  BMP. Choose all/current/custom pages, 36–600 dpi, JPEG quality and greyscale.
-  Images use one file per page (ordered numbered suffixes for multiple pages).
-  Raster output is limited to 24 megapixels per page; choose a lower resolution
-  for large sheets. Original-quality PDF keeps vectors without this limit.
-  Reduced export flattens pages: text is no longer selectable/editable as text.
-  It may not make an already optimised document smaller.
-- Print / Ctrl+P: choose printer, page range and printer settings; rendered output
-  fits the selected paper's margins. Print rendering is tested; physical printers
-  vary and have not been tested in this development session.
-Page extraction/organisation/combination copies page content. Document-level
-bookmarks, forms and optional-content layer configuration may not transfer.
+Tools and saving
+- Organise: drag thumbnails, rotate/remove. Save as creates a copy. Save later
+  applies changes to this tab without writing the original. Closing then asks
+  Save changes? Yes saves the original; No discards; Cancel keeps the tab open.
+  Page organisation resets editing undo history.
+- Extract accepts physical positions/ranges such as 1,3,5-8 or 5-1. Combine joins
+  PDFs in the chosen order. Organise preserves metadata/page labels and retained
+  page references; references to removed pages may no longer be useful. Extract
+  and Combine may omit document-level bookmarks, forms and layer settings.
+- Export: reduced editable PDF, reduced flattened PDF, PNG, JPEG, TIFF or BMP.
+  Choose all/current/custom pages. Raster DPI: 72/96/120/150/200/300/600; JPEG
+  quality and greyscale are available where applicable. Raster output is limited
+  to 24 megapixels/page; use lower DPI for large sheets. Multiple images get
+  ordered numbered filenames. Flattened output no longer has editable text.
+- Editable export is lossless. Fast optimises structure while preserving existing
+  compressed streams; Thorough also recompresses streams and can take minutes on
+  large scans/CAD PDFs. Image quality is preserved. Already compressed PDFs may
+  barely shrink; the smaller valid result is kept. DPI/JPEG quality affect raster
+  formats only.
+- Print / Ctrl+P opens printer settings; pages fit the paper margins.
+- Ctrl+S offers an edited copy on the first ordinary save; Ctrl+Shift+S is Save As.
+  Organise > Save later explicitly targets the original. Closing changed tabs
+  offers Save/Don't save/Cancel (Yes/No/Cancel for deferred organisation), including
+  pending typed text. Failed/cancelled saves keep the document open. Saving reopens
+  the PDF and clears undo history. Toolbar rotation is view-only; component and
+  Organise rotations are saved.
 
-Save and scope
-Ctrl+S offers an edited copy first; Ctrl+Shift+S always offers Save As. Saved PDFs
-are reopened and undo history clears. Closing changed tabs/windows offers Save,
-Don't save or Cancel, including text still being typed. Cancelling a save or a
-failed save keeps the document open. Native toolbar rotation is view-only;
-component rotation and Organise pages rotation are saved. Keep original files.
-Editing covers top-level PDF text and images. Scanned/outlined text, nested Form
-XObjects, annotations, form fields, OCR and password entry are not supported.
-The horizontal inline typing box approximates text; final PDF rendering shows
-actual font metrics, spacing and rotation after Apply.
-
-Performance and privacy
-Windows 10/11 x64, .NET Framework 4.8. PDFium runs locally, no Python or browser is
-required. Only Check for updates contacts GitHub; drawings are not uploaded.
-The cache budget covers cached raster images, not total process memory. Open
-native pages, undo histories, editable content and tabs add memory. Complex first
-renders still take time; cached revisit timings are not first-open timings.
-The application and installer are unsigned. Source and license notices:
-https://github.com/DangerousKitty666/VinsPDF
+Scope and privacy
+Windows 10/11 x64, .NET Framework 4.8. PDFium and QPDF run locally; no Python or
+browser is installed. QPDF starts only for relevant document tools. Only Check
+for updates contacts GitHub; documents are not uploaded. Password entry, OCR,
+form-field editing and nested Form XObject editing are not included. Inline text
+approximates font metrics; the final render after Apply shows spacing/rotation.
+The shared viewer raster cache is 96 MB; native pages, tabs and undo add memory.
+Complex first renders still take time. App and installer are unsigned.
+This software is based in part on the work of the Independent JPEG Group.
+Source/notices: https://github.com/DangerousKitty666/VinsPDF

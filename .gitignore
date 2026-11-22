@@ -5,3 +5,5 @@
 /*.zip
 *.log
 association-error.txt
+
+/qpdf/

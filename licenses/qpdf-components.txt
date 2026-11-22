@@ -1,0 +1,7 @@
+QPDF 12.4.2: https://github.com/qpdf/qpdf/releases/tag/v12.4.2
+Redistributed unchanged from the official MSVC x64 archive. Apache 2.0 license
+and copyright: qpdf-LICENSE.txt, qpdf-NOTICE.md. Windows build dependencies include
+zlib, OpenSSL and libjpeg-turbo; their notices accompany this file.
+This software is based in part on the work of the Independent JPEG Group.
+The accompanying Visual C++ runtime DLLs are Microsoft components supplied by
+the official QPDF distribution and retained unchanged, outside VinsPDF's license.

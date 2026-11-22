@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace VinsPDF {
 internal sealed class TextStyle {
-    public string Family="Arial";
+    public string BlockKey;public string Family="Arial";
     public float Size=14,LineHeight=1.2f,ParagraphGap=6,CharacterSpacing=0;
     public bool Bold,Italic,Underline,Strike,Wrap;public Color? Highlight;public int ListKind;
     public Color? Ink; public int Alignment; public float BoxWidth;
@@ -51,6 +51,7 @@ internal sealed partial class PdfEngine {
     public int PutTextBlock(int index,int[] oldIds,string text,TextStyle style,PointF position,float angle=0) {
         if(string.IsNullOrWhiteSpace(text))throw new IOException("Enter text.");
         if(style.Size<1 || style.Size>500 || style.LineHeight<.5f || style.LineHeight>5 || style.CharacterSpacing< -2 || style.CharacterSpacing>30)throw new IOException("Invalid text settings.");
+        if(style.Wrap&&style.BlockKey==null)style.BlockKey="VinsPDF.Block."+Guid.NewGuid().ToString("N");
         IntPtr page=Page(index),font=FontForStyle(style); var added=new List<IntPtr>();var previous=new List<IntPtr>(); int first=-1;
         foreach(int id in oldIds.Distinct())previous.Add(ObjectAt(index,id));
         uint r=0,g=0,b=0,a=255;if(previous.Count>0)Native.FPDFPageObj_GetFillColor(previous[0],out r,out g,out b,out a);if(style.Ink.HasValue){Color ink=style.Ink.Value;r=ink.R;g=ink.G;b=ink.B;a=ink.A;}
@@ -71,7 +72,7 @@ internal sealed partial class PdfEngine {
                         bool inserted=false;
                         try {
                             Check(Native.FPDFText_SetText(obj,fragment)!=0,"Text could not be encoded.");
-                            MarkStyle(obj,style);IntPtr mark=Native.FPDFPageObj_AddMark(obj,lineKey);
+                            MarkStyle(obj,style);if(style.BlockKey!=null)Native.FPDFPageObj_AddMark(obj,style.BlockKey);IntPtr mark=Native.FPDFPageObj_AddMark(obj,lineKey);
                             Check(mark!=IntPtr.Zero && Native.FPDFPageObjMark_SetStringParam(document,obj,mark,"FragmentText",Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(fragment)))!=0,"Could not retain line information.");
                             double radians=angle*Math.PI/180,cos=Math.Cos(radians),sin=Math.Sin(radians);
                             PointF pos=new PointF(position.X+(float)(advance*cos-down*sin)/Sizes[index].Width,position.Y+(float)(advance*sin+down*cos)/Sizes[index].Height);

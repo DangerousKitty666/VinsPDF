@@ -17,6 +17,14 @@ $process = Start-Process -FilePath $Installer -ArgumentList $arguments -Wait -Pa
 if ($process.ExitCode -ne 0) { throw 'In-place update failed' }
 if ([IO.File]::ReadAllText((Join-Path $root 'README.txt')) -eq 'older install marker') { throw 'In-place update did not replace payload' }
 if ((Get-FileHash -LiteralPath $exe).Hash -ne $expected) { throw 'Updated app mismatch' }
+foreach ($file in (Get-Content -Raw (Join-Path $PSScriptRoot '../qpdf-dependency.json') | ConvertFrom-Json).files) {
+  if ((Get-FileHash -LiteralPath (Join-Path $root ('qpdf/' + $file.name))).Hash -ne $file.sha256) { throw 'Installed QPDF checksum mismatch' }
+}
+$testFolder = Join-Path $env:RUNNER_TEMP 'VinsPDF-installed-engine'
+$fixture = Join-Path $PSScriptRoot 'paragraph-fixture.pdf'
+$check = Start-Process -FilePath $exe -ArgumentList ('--v029-engine-test "' + $testFolder + '" "' + $fixture + '"') -Wait -PassThru -WindowStyle Hidden
+Get-Content (Join-Path $testFolder 'engine-029.txt')
+if ($check.ExitCode -ne 0) { throw 'Installed PDF tools failed' }
 $process = Start-Process -FilePath (Join-Path $root 'unins000.exe') -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART' -Wait -PassThru -WindowStyle Hidden
 if ($process.ExitCode -ne 0) { throw 'Uninstall failed' }
 if (Test-Path -LiteralPath 'HKCU:/Software/Classes/VinsPDF.Document') { throw 'Uninstall retained own association' }

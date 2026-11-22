@@ -1,23 +1,24 @@
-VinsPDF 0.28 — 21 November 2026
+VinsPDF 0.29 — 22 November 2026
 
-Recommended download: VinsPDF-Setup-0.28.exe. Install over your existing version,
-or use About > Check for updates.
+Download VinsPDF-Setup-0.29.exe or use About > Check for updates.
 
-- Floating edit panel fits its contents, with a slim dark scrollbar.
-- Select mode now supports centre-point movement, eight resize handles and the
-  rotation handle. Dragging elsewhere still draws a selection rectangle.
-- Resizable on-page text box; compact font/size, bold/italic/underline/strike,
-  highlight/colour, list and alignment controls, including justification.
-- Removed Rotate selection from the palette; use the circular selection handle.
-- Styled Tools dialogs with the VinsPDF logo. Organise pages shows draggable
-  thumbnails with rotation and removal controls.
-- Export editable or reduced-size PDF, PNG, JPEG, TIFF and BMP. Page ranges,
-  resolution, JPEG quality and greyscale settings are included.
-- Save changes? on close offers Save, Don't save and Cancel. Pending text is
-  saved too; failed or cancelled saves keep the document open.
+- Centred clickable original Home logo; three-column page overview beside PAGES.
+- Compact centred page input and tab captions, filename tooltips, larger + and
+  quick-close x buttons. PDF page labels, fitted-page wheel turns and F11.
+- Search with highlighted results, navigation and case matching. Separate viewer
+  Highlight tool saves native yellow PDF annotations.
+- About matches StruKit's text, arrangement and animated GIF.
+- Editor defaults to 90% opacity with Select and Pan. Removed Move selected,
+  marker and list controls; redesigned text colour button.
+- Thinner resizable inline border. Nearby body paragraphs form one box and reflow
+  together with paragraph breaks. Wrapping survives font changes and saving.
+- Recent undo/redo views repaint immediately without moving the camera.
+- Reduced editable/flattened PDF and PNG/JPEG/TIFF/BMP exports, standard DPI
+  dropdown and fast/thorough lossless compression for editable PDFs.
+- Redesigned Extract dialog. Organise has Save as and Save later; deferred changes
+  stay unsaved until the original document is explicitly saved.
 
-Text formatting applies to whole items; applied paragraphs become separate lines.
-Raster exports flatten content and allow up to 24 megapixels per page. Layers
-remain named page-level editor groups; hidden groups are included in exports.
-Page-copy tools may omit document-level bookmarks/forms/layer configurations.
-See README.txt and Performance.txt for controls, limits and validation.
+Tested on current A012 (15 pages) and A014 (24 pages), plus synthetic fixtures.
+Original drawings remain unchanged and private. See Performance.txt for timings
+and checks, and README.txt for controls and limits. Page labels need PDF metadata;
+OCR and mixed formatting within one item are not included.

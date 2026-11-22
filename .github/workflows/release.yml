@@ -14,7 +14,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Restore pinned PDFium and compile
+      - name: Restore pinned PDF components and compile
         shell: pwsh
         run: ./build.ps1
       - name: Test PDF editing and updater validation
@@ -30,6 +30,9 @@ jobs:
           $test = Start-Process ./VinsPDF.exe -ArgumentList '--v028-engine-test work/tests tests/line-fixture.pdf' -Wait -PassThru -WindowStyle Hidden
           Get-Content work/tests/engine-028.txt
           if ($test.ExitCode -ne 0) { throw '0.28 engine checks failed' }
+          $test = Start-Process ./VinsPDF.exe -ArgumentList '--v029-engine-test work/tests tests/paragraph-fixture.pdf' -Wait -PassThru -WindowStyle Hidden
+          Get-Content work/tests/engine-029.txt
+          if ($test.ExitCode -ne 0) { throw '0.29 engine checks failed' }
           $test = Start-Process ./VinsPDF.exe -ArgumentList '--v025-test work/tests tests/line-fixture.pdf' -Wait -PassThru -WindowStyle Hidden
           Get-Content work/tests/advanced-results.txt
           if ($test.ExitCode -ne 0) { throw 'Editing regression checks failed' }
