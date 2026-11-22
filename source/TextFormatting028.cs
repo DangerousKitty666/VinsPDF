@@ -1,0 +1,23 @@
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Globalization;
+using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.RegularExpressions;
+namespace VinsPDF {
+internal sealed partial class PdfEngine {
+ string FindMarkName(IntPtr obj,string prefix){for(uint i=0;i<Native.FPDFPageObj_CountMarks(obj);i++){IntPtr m=Native.FPDFPageObj_GetMark(obj,i);uint n;Native.FPDFPageObjMark_GetName(m,IntPtr.Zero,0,out n);if(n<2||n>4096)continue;IntPtr b=Marshal.AllocHGlobal((int)n);try{if(Native.FPDFPageObjMark_GetName(m,b,n,out n)!=0){string name=Marshal.PtrToStringUni(b);if(name.StartsWith(prefix,StringComparison.Ordinal))return name;}}finally{Marshal.FreeHGlobal(b);}}return null;}
+ void MarkStyle(IntPtr obj,TextStyle s){string value=string.Join(";",new[]{s.Family,s.Size.ToString(CultureInfo.InvariantCulture),((s.Bold?1:0)|(s.Italic?2:0)|(s.Underline?4:0)|(s.Strike?8:0)).ToString(),s.Alignment.ToString(),s.Highlight.HasValue?s.Highlight.Value.ToArgb().ToString():"",s.ListKind.ToString(),s.LineHeight.ToString(CultureInfo.InvariantCulture),s.ParagraphGap.ToString(CultureInfo.InvariantCulture),s.CharacterSpacing.ToString(CultureInfo.InvariantCulture),s.BoxWidth.ToString(CultureInfo.InvariantCulture),s.Wrap.ToString()});Native.FPDFPageObj_AddMark(obj,"VinsPDF.Style."+Convert.ToBase64String(Encoding.UTF8.GetBytes(value)));}
+ TextStyle ReadStyle(IntPtr obj){string m=FindMarkName(obj,"VinsPDF.Style.");if(m==null)return null;try{string[] a=Encoding.UTF8.GetString(Convert.FromBase64String(m.Substring(14))).Split(';');int flags=int.Parse(a[2]);return new TextStyle{Family=a[0],Size=float.Parse(a[1],CultureInfo.InvariantCulture),Bold=(flags&1)!=0,Italic=(flags&2)!=0,Underline=(flags&4)!=0,Strike=(flags&8)!=0,Alignment=int.Parse(a[3]),Highlight=a[4]==""?(Color?)null:Color.FromArgb(int.Parse(a[4])),ListKind=int.Parse(a[5]),LineHeight=a.Length>6?float.Parse(a[6],CultureInfo.InvariantCulture):1.2f,ParagraphGap=a.Length>7?float.Parse(a[7],CultureInfo.InvariantCulture):6,CharacterSpacing=a.Length>8?float.Parse(a[8],CultureInfo.InvariantCulture):0,BoxWidth=a.Length>9?float.Parse(a[9],CultureInfo.InvariantCulture):0,Wrap=a.Length>10&&bool.Parse(a[10])};}catch{return null;}}
+ List<string> FormatLines(string text,TextStyle style,Graphics g,Font font,StringFormat format){var lines=new List<string>();int number=0;int[] levels=new int[9];foreach(string input in text.Replace("\r\n","\n").Replace('\r','\n').Split('\n')){string line=input;if(style.ListKind>0&&!string.IsNullOrWhiteSpace(line)){int level=Math.Min(8,line.TakeWhile(c=>c=='\t').Count());line=Regex.Replace(line.TrimStart('\t'),@"^(?:[•\-]\s+|\d+(?:\.\d+)*\.\s+)","");number++;levels[level]++;for(int k=0;k<level;k++)if(levels[k]==0)levels[k]=1;for(int k=level+1;k<levels.Length;k++)levels[k]=0;string prefix=style.ListKind==1?"• ":style.ListKind==2?number+". ":string.Join(".",levels.Take(level+1))+". ";line=new string(' ',level*4)+prefix+line;}
+ if(!style.Wrap||style.BoxWidth<20||g.MeasureString(line,font,int.MaxValue,format).Width<=style.BoxWidth){lines.Add(line);continue;}
+ string row="";foreach(string word in Regex.Split(line,@"(?<=\s)")){if(row.Length>0&&g.MeasureString(row+word,font,int.MaxValue,format).Width>style.BoxWidth){lines.Add(row.TrimEnd());row="";}row+=word;}lines.Add(row.TrimEnd());}return lines;}
+ void Decoration(int index,IntPtr page,string key,float x,float y,float width,float height,Color color,PointF position,float angle,List<IntPtr> added,string layer){IntPtr obj=Native.FPDFPageObj_CreateNewRect(x,y,width,height);Check(obj!=IntPtr.Zero,"Could not create text decoration.");bool inserted=false;try{Native.FPDFPath_SetDrawMode(obj,2,0);Native.FPDFPageObj_SetFillColor(obj,color.R,color.G,color.B,color.A);double rad=angle*Math.PI/180,c=Math.Cos(rad),s=Math.Sin(rad);PointF o=ToPdf(page,position.X,position.Y),px=ToPdf(page,position.X+(float)c/Sizes[index].Width,position.Y+(float)s/Sizes[index].Height),py=ToPdf(page,position.X+(float)s/Sizes[index].Width,position.Y-(float)c/Sizes[index].Height);Native.FPDFPageObj_Transform(obj,px.X-o.X,px.Y-o.Y,py.X-o.X,py.Y-o.Y,o.X,o.Y);Native.FPDFPageObj_AddMark(obj,"VinsPDF.Decoration."+key);if(layer!=null)SetObjectLayer(obj,layer);Native.FPDFPage_InsertObject(page,obj);inserted=true;Native.FPDFPageObj_SetIsActive(obj,0);added.Add(obj);}finally{if(!inserted)Native.FPDFPageObj_Destroy(obj);}}
+}
+internal static partial class Native {
+ [DllImport("pdfium.dll")]internal static extern IntPtr FPDFPageObj_CreateNewRect(float x,float y,float width,float height);
+ [DllImport("pdfium.dll")]internal static extern int FPDFPath_SetDrawMode(IntPtr path,int fill,int stroke);
+}
+}

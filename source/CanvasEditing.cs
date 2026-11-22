@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -22,7 +22,7 @@ internal sealed partial class PageCanvas {
  public EditObject CombinedSelection() {
   var chosen=Selection.Count>0?Selection:(Selected==null?new List<EditObject>():new List<EditObject>{Selected});if(chosen.Count==0)return null;if(chosen.Count==1)return chosen[0];
   RectangleF bounds=chosen[0].Bounds;foreach(var o in chosen.Skip(1))bounds=RectangleF.Union(bounds,o.Bounds);
-  return new EditObject {Id=chosen[0].Id,Color=chosen[0].Color,Members=chosen.SelectMany(o=>o.Ids).Distinct().ToArray(),Bounds=bounds,Kind=chosen.All(o=>o.Kind==1)?1:0,BaselineX=chosen.OrderBy(o=>o.Bounds.Top).First().BaselineX,Angle=chosen.OrderBy(o=>o.Bounds.Top).First().Angle,BaselineY=chosen.OrderBy(o=>o.Bounds.Top).First().BaselineY,FontSize=chosen[0].FontSize,DisplayFontSize=chosen[0].DisplayFontSize,Text=string.Join("\n",chosen.OrderBy(o=>o.Bounds.Top).ThenBy(o=>o.Bounds.Left).Select(o=>o.Text).ToArray())};
+  return new EditObject {Id=chosen[0].Id,Style=chosen[0].Style,Color=chosen[0].Color,Members=chosen.SelectMany(o=>o.Ids).Distinct().ToArray(),Bounds=bounds,Kind=chosen.All(o=>o.Kind==1)?1:0,BaselineX=chosen.OrderBy(o=>o.Bounds.Top).First().BaselineX,Angle=chosen.OrderBy(o=>o.Bounds.Top).First().Angle,BaselineY=chosen.OrderBy(o=>o.Bounds.Top).First().BaselineY,FontSize=chosen[0].FontSize,DisplayFontSize=chosen[0].DisplayFontSize,Text=string.Join("\n",chosen.OrderBy(o=>o.Bounds.Top).ThenBy(o=>o.Bounds.Left).Select(o=>o.Text).ToArray())};
  }
  public PointF Normalized(Point pt) {Rectangle p=PageRectangle;return new PointF((pt.X-p.X)/(float)p.Width,(pt.Y-p.Y)/(float)p.Height);}
  Rectangle ScreenRect(RectangleF b) {Rectangle p=PageRectangle;return Rectangle.Round(new RectangleF(p.X+b.X*p.Width,p.Y+b.Y*p.Height,b.Width*p.Width,b.Height*p.Height));}
@@ -32,7 +32,7 @@ internal sealed partial class PageCanvas {
  bool EditMouseDown(MouseEventArgs e) {
   if(InlineActive)return true;
   if(!Editing||!SelectTool||e.Button!=MouseButtons.Left||(ModifierKeys&Keys.Alt)!=0)return false;
-  if(ToolMode==0){if(e.Clicks==2){var hit=Objects.Where(o=>o.Kind==1&&!o.Locked&&ScreenRect(o.Bounds).Contains(e.Location)).OrderBy(o=>o.Bounds.Width*o.Bounds.Height).FirstOrDefault();if(hit!=null&&TextEditRequested!=null)TextEditRequested(hit);return true;}if((ModifierKeys&Keys.Shift)==0)Selection.Clear();Selected=null;marquee=true;objectStart=marqueeEnd=e.Location;Capture=true;NotifySelection();return true;}
+  moving=CombinedSelection();bool special=moving!=null&&HitSelectionControl(moving.Bounds,e.Location);if(ToolMode==0&&!special){if(e.Clicks==2){var hit=Objects.Where(o=>o.Kind==1&&!o.Locked&&ScreenRect(o.Bounds).Contains(e.Location)).OrderBy(o=>o.Bounds.Width*o.Bounds.Height).FirstOrDefault();if(hit!=null&&TextEditRequested!=null)TextEditRequested(hit);return true;}if((ModifierKeys&Keys.Shift)==0)Selection.Clear();Selected=null;marquee=true;objectStart=marqueeEnd=e.Location;Capture=true;NotifySelection();return true;}
   moving=CombinedSelection();if(moving==null)return true;
   if(moving!=null){Rectangle selected=SelectionRect(moving.Bounds);Point handle=new Point((selected.Left+selected.Right)/2,selected.Top-25);if(new Rectangle(handle.X-9,handle.Y-9,18,18).Contains(e.Location)){rotating=true;Capture=true;rotateStart=AngleTo(e.Location,moving.Bounds);rotateDelta=0;return true;}}
   resizeHandle=moving==null?-1:HitHandle(moving.Bounds,e.Location);
@@ -42,13 +42,15 @@ internal sealed partial class PageCanvas {
    if(e.Clicks==2&&moving!=null&&moving.Kind==1){if(TextEditRequested!=null)TextEditRequested(moving);return true;}
   if(moving!=null){objectDrag=true;Capture=true;objectStart=e.Location;startBounds=moving.Bounds;dragBounds=startBounds;}Invalidate();return true;
  }
+ bool RotationHit(RectangleF b,Point p){Rectangle r=SelectionRect(b);return new Rectangle((r.Left+r.Right)/2-9,r.Top-34,18,18).Contains(p);}
+ bool HitSelectionControl(RectangleF b,Point p){Rectangle r=ScreenRect(b);return RotationHit(b,p)||HitHandle(b,p)>=0||new Rectangle((r.Left+r.Right)/2-7,(r.Top+r.Bottom)/2-7,14,14).Contains(p);}
  float SnapX(float v){float s=GridMm*72/25.4f/PageSize.Width;return SnapGrid?(float)Math.Round(v/s)*s:v;}
  float SnapY(float v){float s=GridMm*72/25.4f/PageSize.Height;return SnapGrid?(float)Math.Round(v/s)*s:v;}
  float AngleTo(Point point,RectangleF box){Rectangle r=ScreenRect(box);return(float)(Math.Atan2(point.Y-(r.Top+r.Bottom)/2.0,point.X-(r.Left+r.Right)/2.0)*180/Math.PI);}
  bool EditMouseMove(MouseEventArgs e) {
   if(rotating){rotateDelta=AngleTo(e.Location,moving.Bounds)-rotateStart;if((ModifierKeys&Keys.Shift)!=0)rotateDelta=(float)Math.Round(rotateDelta/15)*15;Invalidate();return true;}
   if(marquee){marqueeEnd=e.Location;Invalidate();return true;}
-  if(!objectDrag){if(Editing&&ToolMode==1){var s=CombinedSelection();int h=s==null?-1:HitHandle(s.Bounds,e.Location);Rectangle cr=s==null?Rectangle.Empty:ScreenRect(s.Bounds);bool centre=s!=null&&new Rectangle((cr.Left+cr.Right)/2-7,(cr.Top+cr.Bottom)/2-7,14,14).Contains(e.Location);Cursor=centre?Cursors.Hand:h<0?Cursors.SizeAll:(h==1||h==5)?Cursors.SizeNS:(h==3||h==7)?Cursors.SizeWE:(h==0||h==4)?Cursors.SizeNWSE:Cursors.SizeNESW;}return false;}
+  if(!objectDrag){if(Editing&&ToolMode!=2){var s=CombinedSelection();int h=s==null?-1:HitHandle(s.Bounds,e.Location);Rectangle cr=s==null?Rectangle.Empty:ScreenRect(s.Bounds);bool centre=s!=null&&new Rectangle((cr.Left+cr.Right)/2-7,(cr.Top+cr.Bottom)/2-7,14,14).Contains(e.Location);bool turn=s!=null&&RotationHit(s.Bounds,e.Location);Cursor=centre||turn?Cursors.Hand:h<0?(ToolMode==0?Cursors.Cross:Cursors.SizeAll):(h==1||h==5)?Cursors.SizeNS:(h==3||h==7)?Cursors.SizeWE:(h==0||h==4)?Cursors.SizeNWSE:Cursors.SizeNESW;}return false;}
   Rectangle p=PageRectangle;float dx=(e.X-objectStart.X)/(float)p.Width,dy=(e.Y-objectStart.Y)/(float)p.Height;
   if(resizeHandle>=0){float l=startBounds.Left,t=startBounds.Top,r=startBounds.Right,b=startBounds.Bottom;
    if(resizeHandle==0||resizeHandle==6||resizeHandle==7)l=SnapX(l+dx);if(resizeHandle==2||resizeHandle==3||resizeHandle==4)r=SnapX(r+dx);

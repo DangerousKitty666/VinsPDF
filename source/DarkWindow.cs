@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
@@ -14,7 +14,7 @@ internal class DarkWindow : Form {
         title.Height=26; title.Dock=DockStyle.Top; title.BackColor=Color.Black;
         caption.Dock=DockStyle.Fill; caption.ForeColor=Color.Silver; caption.TextAlign=ContentAlignment.MiddleLeft; caption.Padding=new Padding(6,0,0,0);
         var icon=new PictureBox { Dock=DockStyle.Left,Width=25,SizeMode=PictureBoxSizeMode.Zoom,Padding=new Padding(3) };
-        Shown+=delegate { if(Icon!=null)icon.Image=Icon.ToBitmap(); MaximizedBounds=Screen.FromControl(this).WorkingArea; };
+        Load+=delegate { if(Icon!=null){if(icon.Image!=null)icon.Image.Dispose();icon.Image=Icon.ToBitmap();}MaximizedBounds=Screen.FromControl(this).WorkingArea; };Disposed+=delegate{if(icon.Image!=null)icon.Image.Dispose();};
         title.Controls.Add(caption); title.Controls.Add(icon);
         TitleButton("—",delegate { WindowState=FormWindowState.Minimized; }); TitleButton("□",delegate { if(Resizable)WindowState=WindowState==FormWindowState.Maximized?FormWindowState.Normal:FormWindowState.Maximized; }); TitleButton("×",delegate { Close(); });
         caption.MouseDown+=delegate(object s,MouseEventArgs e) { if(e.Button==MouseButtons.Left) { ReleaseCapture(); SendMessage(Handle,0xA1,new IntPtr(2),IntPtr.Zero); } };

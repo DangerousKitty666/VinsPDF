@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Runtime.InteropServices;
 namespace VinsPDF {
 internal static partial class Native {

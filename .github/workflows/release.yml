@@ -27,6 +27,9 @@ jobs:
           $test = Start-Process ./VinsPDF.exe -ArgumentList '--v027-engine-test work/tests tests/line-fixture.pdf' -Wait -PassThru -WindowStyle Hidden
           Get-Content work/tests/engine-027.txt
           if ($test.ExitCode -ne 0) { throw '0.27 engine checks failed' }
+          $test = Start-Process ./VinsPDF.exe -ArgumentList '--v028-engine-test work/tests tests/line-fixture.pdf' -Wait -PassThru -WindowStyle Hidden
+          Get-Content work/tests/engine-028.txt
+          if ($test.ExitCode -ne 0) { throw '0.28 engine checks failed' }
           $test = Start-Process ./VinsPDF.exe -ArgumentList '--v025-test work/tests tests/line-fixture.pdf' -Wait -PassThru -WindowStyle Hidden
           Get-Content work/tests/advanced-results.txt
           if ($test.ExitCode -ne 0) { throw 'Editing regression checks failed' }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -21,7 +21,7 @@ internal sealed partial class MainForm {
         undoButton=EditorButton("↶","Undo (Ctrl+Z)",delegate { UndoEditor(false); });
         redoButton=EditorButton("↷","Redo (Ctrl+Y)",delegate { UndoEditor(true); });
         foreach(var button in new[]{addText,addImage,editText,undoButton,redoButton})bar.Items.Remove(button);
-        canvas.SelectionChanged+=delegate { UpdateEditorTools(); };
+        canvas.SelectionChanged+=delegate { if(inlineText==null&&canvas.Selected!=null&&canvas.Selected.Kind==1){var obj=canvas.Selected;if(obj.Style!=null)textStyle=obj.Style.Copy();textStyle.Size=Math.Max(1,obj.DisplayFontSize);textStyle.Ink=Color.FromArgb((int)obj.Color);textStyle.BoxWidth=obj.Bounds.Width*canvas.PageSize.Width;if(palette!=null)palette.SetStyle(textStyle);}UpdateEditorTools(); };
         canvas.TextEditRequested+=EditText;canvas.ObjectRotated+=RotateSelected;
         canvas.ObjectMoved+=delegate(EditObject obj,RectangleF bounds) { if(obj!=null)ApplyEdit(delegate(PdfEngine engine) { engine.TransformObjects(pageIndex,obj.Ids,obj.Bounds,bounds); return obj.Id; },obj.Ids); };
         UpdateEditorTools();
@@ -75,12 +75,13 @@ internal sealed partial class MainForm {
     }
     void EditText(EditObject obj) {BeginInline(obj);}
     void ApplyText(EditObject obj,string value,TextStyle style) {
+        if(obj!=null&&obj.Style!=null&&obj.Style.ListKind>0)value=System.Text.RegularExpressions.Regex.Replace(value,@"(?m)^\s*(?:[•\-]\s+|\d+(?:\.\d+)*\.\s+)","");
         PointF position=obj==null?canvas.Normalized(new Point(canvas.Width/2,canvas.Height/2)):new PointF(obj.BaselineX,obj.BaselineY);
         if(obj==null){position.X=Math.Max(.05f,Math.Min(.85f,position.X));position.Y=Math.Max(.05f,Math.Min(.9f,position.Y));}
         int[] ids=obj==null?new int[0]:obj.Ids;TextStyle copy=style.Copy();if(obj!=null)copy.BoxWidth=obj.Bounds.Width*canvas.PageSize.Width;ApplyEdit(delegate(PdfEngine e){return e.PutTextBlock(pageIndex,ids,value,copy,position,obj==null?0:obj.Angle);});
     }
     void ShowPalette() {
-        if(palette==null || palette.IsDisposed){palette=new EditorPalette();palette.Location=PointToScreen(new Point(Math.Max(0,Width-250),45));palette.Height=Math.Min(640,Screen.FromControl(this).WorkingArea.Height-80);palette.Command+=PaletteCommand;palette.Highlight.CheckedChanged+=delegate{canvas.HighlightObjects=palette.Highlight.Checked;canvas.Invalidate();};palette.Lines.CheckedChanged+=delegate{if(!FinishInline())return;canvas.GroupLines=palette.Lines.Checked;canvas.SetObjects(editorState,-1);};palette.SetStyle(textStyle);VisibleChanged+=delegate{if(palette!=null&&palette.TopLevel){if(Visible&&canvas.Editing){if(!palette.Visible)palette.Show(TopLevelControl as Form??this);}else palette.Hide();}};}
+        if(palette==null || palette.IsDisposed){palette=new EditorPalette();palette.Location=PointToScreen(new Point(Math.Max(0,Width-250),45));palette.Command+=PaletteCommand;palette.Highlight.CheckedChanged+=delegate{canvas.HighlightObjects=palette.Highlight.Checked;canvas.Invalidate();};palette.Lines.CheckedChanged+=delegate{if(!FinishInline())return;canvas.GroupLines=palette.Lines.Checked;canvas.SetObjects(editorState,-1);};palette.SetStyle(textStyle);VisibleChanged+=delegate{if(palette!=null&&palette.TopLevel){if(Visible&&canvas.Editing){if(!palette.Visible)palette.Show(TopLevelControl as Form??this);}else palette.Hide();}};}
         editorDock.Visible=false;palette.Mode(canvas.ToolMode);if(!palette.Visible)palette.Show(TopLevelControl as Form??this);RefreshLayers();
     }
     void TogglePaletteFloat(){ShowPalette();}
@@ -95,6 +96,7 @@ internal sealed partial class MainForm {
             case "edittext":EditText(canvas.CombinedSelection());break;
             case "undo":if(FinishInline())UndoEditor(false);break;case "redo":if(FinishInline())UndoEditor(true);break;
             case "delete":if(FinishInline())DeleteSelection();break;
+            case "highlightcolour":palette.ChooseHighlight();break;
             case "colour":palette.ChooseColour();break;
             case "layerassign":case "layerremove":case "layerrename":case "layervisibility":case "layerlock":case "layerselect":LayerCommand(command);break;
             case "gridapply":palette.ApplyGrid(canvas);break;
@@ -132,10 +134,12 @@ internal sealed partial class MainForm {
     void UpdateDocumentTitle() { Text=(currentPath==null?"":Path.GetFileName(currentPath)+(dirty?" *":"")+" — ")+"VinsPDF"; }
     public bool CanCloseDocument(){return ConfirmDiscard();}
     bool ConfirmDiscard() {
-        if(!FinishInline())return false;
         if(editBusy) { status.Text="Please wait for the current edit or save to finish."; return false; }
-        if(!dirty)return true;
-        return DarkMessage.Show(this,"Discard unsaved changes?\nChoose No to return and save your PDF.","VinsPDF",MessageBoxButtons.YesNo,MessageBoxIcon.Question,MessageBoxDefaultButton.Button2)==DialogResult.Yes;
+        if(!dirty&&inlineText==null)return true;
+        using(var dialog=new SaveChangesDialog(Path.GetFileName(currentPath))){var answer=dialog.ShowDialog(TopLevelControl as Form??this);if(answer==DialogResult.No){CancelInline();return true;}if(answer!=DialogResult.Yes)return false;}
+        string target=currentPath;
+        if(!savedOnce)using(var picker=new SaveFileDialog{Filter="PDF document|*.pdf",Title="Save changes",FileName=Path.GetFileNameWithoutExtension(currentPath)+"-edited.pdf",InitialDirectory=Path.GetDirectoryName(currentPath),OverwritePrompt=true,AddExtension=true,DefaultExt="pdf"}){if(picker.ShowDialog(TopLevelControl as Form??this)!=DialogResult.OK)return false;target=picker.FileName;}
+        return SaveBeforeClose(target);
     }
     void SaveEdited(bool saveAs) {
         if(sizes==null || editBusy || !FinishInline())return;

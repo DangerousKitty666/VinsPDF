@@ -1,14 +1,15 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Linq;
 
 namespace VinsPDF {
 internal sealed class EditObject {
-    public int Id,Kind;public string Layer;public bool Locked;
+    public TextStyle Style;public int Id,Kind;public string Layer;public bool Locked;
     public RectangleF Bounds;
     public string Text;
     public string GroupKey,LineText;
@@ -46,17 +47,18 @@ internal sealed partial class PdfEngine {
     public EditState GetObjects(int index) {
         var result=new EditState { CanUndo=undo.Count>0,CanRedo=redo.Count>0 };
         IntPtr page=Page(index),textPage=Native.FPDFText_LoadPage(page);
-        var textObjects=new Dictionary<IntPtr,EditObject>();
+        var textObjects=new Dictionary<IntPtr,EditObject>();var decorations=new Dictionary<string,List<int>>();
         try {
             int count=Native.FPDFPage_CountObjects(page);
             for(int i=0;i<count;i++) {
                 IntPtr obj=Native.FPDFPage_GetObject(page,i); int kind=Native.FPDFPageObj_GetType(obj),active;
+                if(kind==2){int on;if(Native.FPDFPageObj_GetIsActive(obj,out on)!=0&&on!=0){string key=FindMarkName(obj,"VinsPDF.Decoration.");if(key!=null){key=key.Substring("VinsPDF.Decoration.".Length);if(!decorations.ContainsKey(key))decorations[key]=new List<int>();decorations[key].Add(i);}}continue;}
                 if((kind!=1 && kind!=3) || Native.FPDFPageObj_GetIsActive(obj,out active)==0 || active==0)continue;
                 float l,b,r,t; if(Native.FPDFPageObj_GetBounds(obj,out l,out b,out r,out t)==0)continue;
                 PointF a=ToDisplay(page,l,b),z=ToDisplay(page,r,t);
                 var item=new EditObject { Id=i,Kind=kind,Bounds=RectangleF.FromLTRB(Math.Min(a.X,z.X),Math.Min(a.Y,z.Y),Math.Max(a.X,z.X),Math.Max(a.Y,z.Y)),Text="" };
                 if(kind==1) {
-                    textObjects[obj]=item;
+                    textObjects[obj]=item;item.Style=ReadStyle(obj);
                     for(uint markIndex=0;markIndex<Native.FPDFPageObj_CountMarks(obj);markIndex++){IntPtr mark=Native.FPDFPageObj_GetMark(obj,markIndex);uint length;Native.FPDFPageObjMark_GetName(mark,IntPtr.Zero,0,out length);if(length>2 && length<2048){IntPtr buffer=Marshal.AllocHGlobal((int)length);try{if(Native.FPDFPageObjMark_GetName(mark,buffer,length,out length)!=0){string name=Marshal.PtrToStringUni(buffer);if(name!=null&&name.StartsWith("VinsPDF.Line.")){item.GroupKey=name;uint required;Native.FPDFPageObjMark_GetParamStringValue(mark,"FragmentText",IntPtr.Zero,0,out required);if(required>2 && required<2000000){IntPtr textBuffer=Marshal.AllocHGlobal((int)required);try{if(Native.FPDFPageObjMark_GetParamStringValue(mark,"FragmentText",textBuffer,required,out required)!=0){try{item.LineText=Encoding.UTF8.GetString(Convert.FromBase64String(Marshal.PtrToStringUni(textBuffer)));}catch(FormatException){}}}finally{Marshal.FreeHGlobal(textBuffer);}}}}}finally{Marshal.FreeHGlobal(buffer);}}}
                     Native.FPDFTextObj_GetFontSize(obj,out item.FontSize);
                     Native.Matrix matrix; if(Native.FPDFPageObj_GetMatrix(obj,out matrix)!=0) { item.DisplayFontSize=(float)Math.Sqrt(matrix.C*matrix.C+matrix.D*matrix.D)*item.FontSize; PointF p1=ToDisplay(page,matrix.E,matrix.F),p2=ToDisplay(page,matrix.E+matrix.A,matrix.F+matrix.B); item.BaselineY=p1.Y;item.BaselineX=p1.X; item.Angle=(float)(Math.Atan2((p2.Y-p1.Y)*Sizes[index].Height,(p2.X-p1.X)*Sizes[index].Width)*180/Math.PI); }
@@ -69,6 +71,7 @@ internal sealed partial class PdfEngine {
             }
             var source=new StringBuilder();int chars=Native.FPDFText_CountChars(textPage);
             if(chars<2000000)for(int charIndex=0;charIndex<chars;charIndex++){uint code=Native.FPDFText_GetUnicode(textPage,charIndex);if(code==0||code>0x10ffff||(code>=0xd800&&code<=0xdfff))continue;int start=source.Length;source.Append(code==160?" ":char.ConvertFromUtf32((int)code));EditObject item;if(textObjects.TryGetValue(Native.FPDFText_GetTextObject(textPage,charIndex),out item)){if(item.TextStart<0)item.TextStart=start;item.TextEnd=source.Length;}}
+            foreach(var group in textObjects.Values.Where(o=>o.GroupKey!=null).GroupBy(o=>o.GroupKey)){List<int> ids;if(decorations.TryGetValue(group.Key,out ids)){var first=group.First();first.Members=first.Ids.Concat(ids).ToArray();}}
             string pageText=source.ToString();foreach(var item in textObjects.Values)item.SourceText=pageText;
         } finally { if(textPage!=IntPtr.Zero)Native.FPDFText_ClosePage(textPage); }
         return result;

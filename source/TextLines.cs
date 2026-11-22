@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -45,7 +45,7 @@ internal static class TextLines {
         }
         string joined=text.ToString();
         if(items.All(o=>o.TextStart>=0 && o.TextEnd>=0) && items[0].SourceText!=null){int start=items.Min(o=>o.TextStart),end=items.Max(o=>o.TextEnd);string span=items[0].SourceText.Substring(start,end-start);if(!span.Contains("\n")&&!span.Contains("\r")&&span.Count(c=>char.IsWhiteSpace(c))>=items.Sum(o=>o.Text.Count(c=>char.IsWhiteSpace(c)))&&span.Count(c=>!char.IsWhiteSpace(c))==items.Sum(o=>o.Text.Count(c=>!char.IsWhiteSpace(c))))joined=span.Trim();}
-        return new EditObject { Id=items[0].Id,Kind=1,Layer=items[0].Layer,Locked=items.Any(o=>o.Locked),Bounds=bounds,Text=System.Text.RegularExpressions.Regex.Replace(joined,@"\s+"," ").Trim(),FontSize=items[0].FontSize,DisplayFontSize=items[0].DisplayFontSize,Color=items[0].Color,Angle=items[0].Angle,BaselineY=items[0].BaselineY,BaselineX=items[0].BaselineX,Members=items.SelectMany(o=>o.Ids).ToArray() };
+        return new EditObject { Id=items[0].Id,Kind=1,Style=items[0].Style,Layer=items[0].Layer,Locked=items.Any(o=>o.Locked),Bounds=bounds,Text=System.Text.RegularExpressions.Regex.Replace(joined,@"\s+"," ").Trim(),FontSize=items[0].FontSize,DisplayFontSize=items[0].DisplayFontSize,Color=items[0].Color,Angle=items[0].Angle,BaselineY=items[0].BaselineY,BaselineX=items[0].BaselineX,Members=items.SelectMany(o=>o.Ids).ToArray() };
     }
 }
 }

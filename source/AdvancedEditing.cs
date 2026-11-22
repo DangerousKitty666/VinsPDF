@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
@@ -9,7 +9,7 @@ namespace VinsPDF {
 internal sealed class TextStyle {
     public string Family="Arial";
     public float Size=14,LineHeight=1.2f,ParagraphGap=6,CharacterSpacing=0;
-    public bool Bold,Italic;
+    public bool Bold,Italic,Underline,Strike,Wrap;public Color? Highlight;public int ListKind;
     public Color? Ink; public int Alignment; public float BoxWidth;
     public TextStyle Copy() { return (TextStyle)MemberwiseClone(); }
 }
@@ -58,19 +58,20 @@ internal sealed partial class PdfEngine {
             using(var scratch=new Bitmap(1,1))using(var graphics=Graphics.FromImage(scratch))using(var measureFont=new Font(style.Family,style.Size,(style.Bold?FontStyle.Bold:FontStyle.Regular)|(style.Italic?FontStyle.Italic:FontStyle.Regular),GraphicsUnit.Pixel)) {
                 var measureFormat=(StringFormat)StringFormat.GenericTypographic.Clone();measureFormat.FormatFlags|=StringFormatFlags.MeasureTrailingSpaces;
                 float down=0;
-                foreach(string line in text.Replace("\r\n","\n").Replace('\r','\n').Split('\n')) {
+                var displayLines=FormatLines(text,style,graphics,measureFont,measureFormat);for(int lineIndex=0;lineIndex<displayLines.Count;lineIndex++){string line=displayLines[lineIndex];
                     if(string.IsNullOrWhiteSpace(line)) { down+=style.Size*style.LineHeight+style.ParagraphGap;continue; }
                     var fragments=new List<string>();
                     string lineKey="VinsPDF.Line."+Guid.NewGuid().ToString("N");
-                    if(Math.Abs(style.CharacterSpacing)<.001f)fragments.Add(line);
+                    bool justify=style.Alignment==3&&lineIndex+1<displayLines.Count&&!string.IsNullOrWhiteSpace(displayLines[lineIndex+1]);if(Math.Abs(style.CharacterSpacing)<.001f&&!justify)fragments.Add(line);
                     else {var en=StringInfo.GetTextElementEnumerator(line);while(en.MoveNext())fragments.Add(en.GetTextElement());}
-                    float measured=graphics.MeasureString(line,measureFont,int.MaxValue,measureFormat).Width+Math.Max(0,fragments.Count-1)*style.CharacterSpacing;float advance=style.Alignment==0?0:(Math.Max(measured,style.BoxWidth)-measured)*(style.Alignment==1?.5f:1f);
+                    float measured=graphics.MeasureString(line,measureFont,int.MaxValue,measureFormat).Width+Math.Max(0,fragments.Count-1)*style.CharacterSpacing;float advance=style.Alignment==0||style.Alignment==3?0:(Math.Max(measured,style.BoxWidth)-measured)*(style.Alignment==1?.5f:1f);
+                    float spaceExtra=justify?Math.Max(0,style.BoxWidth-measured)/Math.Max(1,line.Count(char.IsWhiteSpace)):0;float decorationWidth=justify?Math.Max(measured,style.BoxWidth):measured;string layer=previous.Count>0?ObjectLayer(previous[0]):null;Color decorationColor=Color.FromArgb((int)a,(int)r,(int)g,(int)b);if(style.Highlight.HasValue)Decoration(index,page,lineKey,advance,-down-style.Size*.2f,decorationWidth,style.Size*1.15f,style.Highlight.Value,position,angle,added,layer);if(style.Underline)Decoration(index,page,lineKey,advance,-down-style.Size*.18f,decorationWidth,Math.Max(.6f,style.Size*.055f),decorationColor,position,angle,added,layer);if(style.Strike)Decoration(index,page,lineKey,advance,-down+style.Size*.3f,decorationWidth,Math.Max(.6f,style.Size*.055f),decorationColor,position,angle,added,layer);
                     foreach(string fragment in fragments) {
                         IntPtr obj=Native.FPDFPageObj_CreateTextObj(document,font,style.Size);Check(obj!=IntPtr.Zero,"Could not create text.");
                         bool inserted=false;
                         try {
                             Check(Native.FPDFText_SetText(obj,fragment)!=0,"Text could not be encoded.");
-                            IntPtr mark=Native.FPDFPageObj_AddMark(obj,lineKey);
+                            MarkStyle(obj,style);IntPtr mark=Native.FPDFPageObj_AddMark(obj,lineKey);
                             Check(mark!=IntPtr.Zero && Native.FPDFPageObjMark_SetStringParam(document,obj,mark,"FragmentText",Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(fragment)))!=0,"Could not retain line information.");
                             double radians=angle*Math.PI/180,cos=Math.Cos(radians),sin=Math.Sin(radians);
                             PointF pos=new PointF(position.X+(float)(advance*cos-down*sin)/Sizes[index].Width,position.Y+(float)(advance*sin+down*cos)/Sizes[index].Height);
@@ -79,7 +80,7 @@ internal sealed partial class PdfEngine {
                             Native.FPDFPageObj_Transform(obj,(px.X-origin.X)/lx,(px.Y-origin.Y)/lx,(py.X-origin.X)/ly,(py.Y-origin.Y)/ly,origin.X,origin.Y);Native.FPDFPageObj_SetFillColor(obj,r,g,b,a);
                             if(previous.Count>0)SetObjectLayer(obj,ObjectLayer(previous[0]));Native.FPDFPage_InsertObject(page,obj);inserted=true;Native.FPDFPageObj_SetIsActive(obj,0);added.Add(obj);if(first<0)first=Native.FPDFPage_CountObjects(page)-1;
                         } finally {if(!inserted)Native.FPDFPageObj_Destroy(obj);}
-                        advance+=graphics.MeasureString(fragment,measureFont,int.MaxValue,measureFormat).Width+style.CharacterSpacing;
+                        advance+=graphics.MeasureString(fragment,measureFont,int.MaxValue,measureFormat).Width+style.CharacterSpacing+(string.IsNullOrWhiteSpace(fragment)?spaceExtra:0);
                     }
                     down+=style.Size*style.LineHeight;
                 }

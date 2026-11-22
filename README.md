@@ -2,15 +2,16 @@
 
 A compact dark Windows PDF viewer/editor. Windows 10/11 x64 and .NET Framework 4.8.
 
-**[Download VinsPDF 0.27 - Windows installer](https://github.com/DangerousKitty666/VinsPDF/releases/download/v0.27/VinsPDF-Setup-0.27.exe)**
+**[Download VinsPDF 0.28 - Windows installer](https://github.com/DangerousKitty666/VinsPDF/releases/download/v0.28/VinsPDF-Setup-0.28.exe)**
 
 Setup installs the app, shortcuts, PDF associations and uninstaller. About > Check for updates installs future updates after verification. Select your PDF default in Windows Default Apps.
 
 - Cached page revisits, idle next-page preparation, single/two-page layouts.
 - Tabs with drag-out windows, thumbnails and a translucent page overview.
 - Compact floating editor: Select, Move selected, Pan, inline text, images, resize and rotation.
-- Fonts, colour, alignment, spacing, live grid, headers/footers and named editor layers.
-- Combine PDFs, organise pages, extract ranges, export PDFs and print.
+- Resizable inline text, emphasis, highlights, lists, alignment, spacing, live grid and layers.
+- Drag page thumbnails to organise; combine/extract PDFs, export PDF or images, and print.
+- Save / Don't save / Cancel on close, including text still being typed.
 
 [Controls and limits](README.txt) | [Performance and tests](Performance.txt)
 

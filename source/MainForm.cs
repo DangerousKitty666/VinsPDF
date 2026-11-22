@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -247,7 +247,7 @@ internal sealed partial class MainForm : DarkWindow {
                     }
                     if(documentVisible&&thumbnailsEnabled){worker.ClearIdle();QueueNextPage(token,index);QueueThumbnails(token);}
                     status.Text="Page "+(index+1)+" of "+sizes.Length+"  ·  "+elapsed+" ms  ·  "+(canvas.Editing?"Select / Move selected / Pan · Double-click text to edit":"Ctrl+wheel to zoom / drag to pan");
-                    if(firstPaint) { firstPaint=false; canvas.Update(); Trace("first_page_ms="+openClock.ElapsedMilliseconds); Trace("startup_to_page_ms="+Startup.ElapsedMilliseconds); QueueThumbnails(token); if(V027Directory!=null&&!V027Started){V027Started=true;Start027Test();}else if(V026Directory!=null&&!V026Started){V026Started=true;Start026Test();}else if(EditorTestDirectory!=null)StartEditorUITest(); else if(SelfTestDirectory!=null)StartSelfTest(); else if(SnapshotPath!=null) { testTimer=new Timer(); testTimer.Interval=3500; testTimer.Tick+=delegate { testTimer.Stop(); testTimer.Dispose(); SaveSnapshot(); }; testTimer.Start(); } }
+                    if(firstPaint) { firstPaint=false; canvas.Update(); Trace("first_page_ms="+openClock.ElapsedMilliseconds); Trace("startup_to_page_ms="+Startup.ElapsedMilliseconds); QueueThumbnails(token); if(V028Directory!=null&&!V028Started){V028Started=true;Start028Test();}else if(V027Directory!=null&&!V027Started){V027Started=true;Start027Test();}else if(V026Directory!=null&&!V026Started){V026Started=true;Start026Test();}else if(EditorTestDirectory!=null)StartEditorUITest(); else if(SelfTestDirectory!=null)StartSelfTest(); else if(SnapshotPath!=null) { testTimer=new Timer(); testTimer.Interval=3500; testTimer.Tick+=delegate { testTimer.Stop(); testTimer.Dispose(); SaveSnapshot(); }; testTimer.Start(); } }
                 },bitmap);
             } catch(OperationCanceledException) {} catch(Exception ex) { string message=ex.Message; Post(delegate { if(token==generation)status.Text="Could not render page: "+message; },null); }
         });
