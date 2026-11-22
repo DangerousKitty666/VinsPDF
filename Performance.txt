@@ -42,3 +42,11 @@ Local installer tests use an isolated folder without changing the user's app or
 associations. GitHub's clean Windows runner checks full installation, associations,
 icons, replacement in place and uninstall before publishing. Runtime dependencies
 are pinned and checksum-verified. See the release Actions run for final results.
+
+0.29.1 hotfix validation
+Reproduced the disposed EditorPalette failure on closing an edited tab in 0.29.
+Seven UI lifecycle tests pass after the fix: tab close, window close, cancelled
+close, detached tab/old-window close, disposed-panel recovery with queued layer
+updates, panel close during inline typing, and save on close. Saved text is
+reopened and searched to confirm persistence. Tests run off-screen and log failures
+without displaying crash dialogs. The renderer and document engine are unchanged.

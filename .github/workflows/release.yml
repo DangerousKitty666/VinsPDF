@@ -36,6 +36,14 @@ jobs:
           $test = Start-Process ./VinsPDF.exe -ArgumentList '--v025-test work/tests tests/line-fixture.pdf' -Wait -PassThru -WindowStyle Hidden
           Get-Content work/tests/advanced-results.txt
           if ($test.ExitCode -ne 0) { throw 'Editing regression checks failed' }
+      - name: Test editing-panel shutdown and recovery
+        shell: pwsh
+        run: |
+          foreach ($case in @('tab-close','close','cancel-close','detach','recreate','inline-close','save-close')) {
+            $test = Start-Process ./VinsPDF.exe -ArgumentList ("--palette-lifecycle-test work/lifecycle tests/paragraph-fixture.pdf " + $case) -Wait -PassThru -WindowStyle Hidden
+            Get-Content ("work/lifecycle/palette-" + $case + ".txt")
+            if ($test.ExitCode -ne 0) { throw ("Palette lifecycle failed: " + $case) }
+          }
       - name: Prepare verified installer compiler
         shell: pwsh
         run: |

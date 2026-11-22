@@ -86,7 +86,7 @@ internal sealed partial class MainForm : DarkWindow {
         view.DropDownItems.Add(Item("&Actual size",delegate { canvas.ActualSize(); },Keys.Control|Keys.D1));
         view.DropDownItems.Add(Item("&Page thumbnails",ToggleThumbnails,Keys.F9));
         var help=new ToolStripMenuItem("&Help");
-        help.DropDownItems.Add(Item("Controls & about",delegate { DarkMessage.Show(this,"VinsPDF 0.29 · Viewer + editor\n\nCtrl+O Open · Ctrl+S Save · Ctrl+Shift+S Save As\nCtrl+E Edit mode · Ctrl+Z Undo · Ctrl+Y Redo\nCtrl+0 Fit page · Ctrl+2 Fit width · F9 Thumbnails · F11 Full screen · Ctrl+F Search\nCtrl+wheel Zoom · Middle-drag or Alt+drag Pan\n\nEdit: select text or an image. Drag its centre handle to move.\nDrag the corner to resize; Shift allows free proportions.\nDouble-click text to edit. Delete removes the selection.\nText blocks are recognised geometrically. Nested form content is not editable.\nToolbar rotation changes the view. Selection rotation is saved.\nInline text: Ctrl+Enter applies; Esc cancels.","VinsPDF",MessageBoxButtons.OK,MessageBoxIcon.Information); },Keys.None));
+        help.DropDownItems.Add(Item("Controls & about",delegate { DarkMessage.Show(this,"VinsPDF 0.29.1 · Viewer + editor\n\nCtrl+O Open · Ctrl+S Save · Ctrl+Shift+S Save As\nCtrl+E Edit mode · Ctrl+Z Undo · Ctrl+Y Redo\nCtrl+0 Fit page · Ctrl+2 Fit width · F9 Thumbnails · F11 Full screen · Ctrl+F Search\nCtrl+wheel Zoom · Middle-drag or Alt+drag Pan\n\nEdit: select text or an image. Drag its centre handle to move.\nDrag the corner to resize; Shift allows free proportions.\nDouble-click text to edit. Delete removes the selection.\nText blocks are recognised geometrically. Nested form content is not editable.\nToolbar rotation changes the view. Selection rotation is saved.\nInline text: Ctrl+Enter applies; Esc cancels.","VinsPDF",MessageBoxButtons.OK,MessageBoxIcon.Information); },Keys.None));
         menu.Items.AddRange(new ToolStripItem[]{file,view,help}); MainMenuStrip=menu;
         bar.Renderer=renderer; bar.BackColor=BackColor; bar.ForeColor=ForeColor; bar.GripStyle=ToolStripGripStyle.Hidden; bar.Padding=new Padding(3,2,3,2); bar.AutoSize=false; bar.Height=30;
         menu.Items.Clear();
@@ -128,9 +128,10 @@ internal sealed partial class MainForm : DarkWindow {
         DragEnter+=delegate(object s,DragEventArgs e) { if(e.Data.GetDataPresent(DataFormats.FileDrop)) e.Effect=DragDropEffects.Copy; };
         DragDrop+=delegate(object s,DragEventArgs e) { var paths=e.Data.GetData(DataFormats.FileDrop) as string[]; if(paths!=null)foreach(string path in paths){if(OpenInTab!=null)OpenInTab(path);else OpenFile(path);} };
         Shown+=delegate { TryDarkTitle(); Trace("window_shown_ms="+Startup.ElapsedMilliseconds); if(initialPath!=null) OpenFile(initialPath); else if(SnapshotPath!=null) BeginInvoke((Action)SaveSnapshot); };
-        FormClosed+=delegate {if(palette!=null){palette.AllowClose=true;palette.Close();} ClearUndoViews();closing=true; generation++; worker.Stop(); debounce.Dispose(); ClearImages(); };
+        FormClosed+=delegate {closing=true;generation++;DisposePalette();ClearUndoViews();worker.Stop();debounce.Dispose();ClearImages();};
+        Disposed+=delegate{closing=true;DisposePalette();};
         FormClosing+=delegate(object sender,FormClosingEventArgs e) { if(!approvedClose&&!ConfirmDiscard())e.Cancel=true; };
-        VisibleChanged+=delegate{documentVisible=Visible;worker.ClearIdle();if(Visible&&sizes!=null){RequestRender();RenderSecond();QueueThumbnails(generation);}};InstallLayout();InstallWheelRouter();EnableDocument(false);
+        VisibleChanged+=delegate{if(closing||IsDisposed||Disposing)return;documentVisible=Visible;worker.ClearIdle();if(Visible&&sizes!=null){RequestRender();RenderSecond();QueueThumbnails(generation);}SyncPaletteVisibility();};InstallLayout();InstallWheelRouter();EnableDocument(false);
     }
     [DllImport("dwmapi.dll")] static extern int DwmSetWindowAttribute(IntPtr hwnd,int attr,ref int value,int size);
     void TryDarkTitle() { try { int one=1; DwmSetWindowAttribute(Handle,20,ref one,4); } catch {} }
@@ -169,8 +170,8 @@ internal sealed partial class MainForm : DarkWindow {
     void AddButton(string text,string tip,Action action,bool needsDocument) { var b=new ToolStripButton(text) { ToolTipText=tip,ForeColor=ForeColor,Padding=new Padding(2,0,2,0) }; b.Click+=delegate { action(); }; bar.Items.Add(b); if(needsDocument)documentTools.Add(b); }
     void EnableDocument(bool enabled) { foreach(var t in documentTools)t.Enabled=enabled; pages.Enabled=enabled; UpdateEditorTools(); }
     void Post(Action action,Bitmap disposable) {
-        if(closing || IsDisposed) { if(disposable!=null)disposable.Dispose(); return; }
-        try { BeginInvoke((Action)delegate { if(closing) { if(disposable!=null)disposable.Dispose(); } else action(); }); }
+        if(closing || IsDisposed || Disposing) { if(disposable!=null)disposable.Dispose(); return; }
+        try { BeginInvoke((Action)delegate { if(closing||IsDisposed||Disposing) { if(disposable!=null)disposable.Dispose(); } else action(); }); }
         catch(InvalidOperationException) { if(disposable!=null)disposable.Dispose(); }
     }
     public Action<string> OpenInTab;public Action CloseTab;

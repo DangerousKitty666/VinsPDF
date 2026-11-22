@@ -23,6 +23,7 @@ internal static class Program {
         if(args.Length>0 && args[0]=="--register-pdf"){try{Associations.Register();return 0;}catch(Exception ex){System.IO.File.WriteAllText(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"association-error.txt"),ex.ToString());return 1;}}
         Associations.SetCurrentProcessExplicitAppUserModelID("VinsPDF.Desktop");
         SetProcessDPIAware(); ToolStripManager.Renderer=new DarkRenderer(); Application.EnableVisualStyles(); Application.SetCompatibleTextRenderingDefault(false);
+        if(args.Length>0 && args[0]=="--palette-lifecycle-test")return PaletteLifecycleTests.Run(args);
         string path=null;
         for(int i=0;i<args.Length;i++) { if(args[i]=="--v029-ui-test" && i+1<args.Length)MainForm.V029Directory=args[++i];else if(args[i]=="--v028-ui-test" && i+1<args.Length)MainForm.V028Directory=args[++i];else if(args[i]=="--v027-ui-test" && i+1<args.Length)MainForm.V027Directory=args[++i];else if(args[i]=="--v026-ui-test" && i+1<args.Length)MainForm.V026Directory=args[++i];else if(args[i]=="--trace" && i+1<args.Length) MainForm.TracePath=args[++i]; else if(args[i]=="--snapshot" && i+1<args.Length) MainForm.SnapshotPath=args[++i]; else if(args[i]=="--self-test" && i+1<args.Length) MainForm.SelfTestDirectory=args[++i]; else if(args[i]=="--editor-ui-test" && i+1<args.Length) MainForm.EditorTestDirectory=args[++i]; else if(args[i]=="--test")MainForm.TestRun=true; else path=args[i]; }
         if(MainForm.TestRun||MainForm.SelfTestDirectory!=null||MainForm.EditorTestDirectory!=null||MainForm.SnapshotPath!=null)Application.Run(new MainForm(path));else{Application.Run(new WindowSession(path));} return 0;
@@ -57,4 +58,5 @@ internal static class Program {
     }
 }
 }
+
 

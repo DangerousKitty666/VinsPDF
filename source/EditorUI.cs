@@ -21,19 +21,19 @@ internal sealed partial class MainForm {
         undoButton=EditorButton("↶","Undo (Ctrl+Z)",delegate { UndoEditor(false); });
         redoButton=EditorButton("↷","Redo (Ctrl+Y)",delegate { UndoEditor(true); });
         foreach(var button in new[]{addText,addImage,editText,undoButton,redoButton})bar.Items.Remove(button);
-        canvas.SelectionChanged+=delegate { if(inlineText==null&&canvas.Selected!=null&&canvas.Selected.Kind==1){var obj=canvas.Selected;if(obj.Style!=null)textStyle=obj.Style.Copy();textStyle.Size=Math.Max(1,obj.DisplayFontSize);textStyle.Ink=Color.FromArgb((int)obj.Color);textStyle.BoxWidth=obj.Bounds.Width*canvas.PageSize.Width;if(palette!=null)palette.SetStyle(textStyle);}UpdateEditorTools(); };
+        canvas.SelectionChanged+=delegate { if(inlineText==null&&canvas.Selected!=null&&canvas.Selected.Kind==1){var obj=canvas.Selected;if(obj.Style!=null)textStyle=obj.Style.Copy();textStyle.Size=Math.Max(1,obj.DisplayFontSize);textStyle.Ink=Color.FromArgb((int)obj.Color);textStyle.BoxWidth=obj.Bounds.Width*canvas.PageSize.Width;if(HasPalette)palette.SetStyle(textStyle);}UpdateEditorTools(); };
         canvas.TextEditRequested+=EditText;canvas.ObjectRotated+=RotateSelected;
         canvas.ObjectMoved+=delegate(EditObject obj,RectangleF bounds) { if(obj!=null)ApplyEdit(delegate(PdfEngine engine) { engine.TransformObjects(pageIndex,obj.Ids,obj.Bounds,bounds); return obj.Id; },obj.Ids); };
         UpdateEditorTools();
     }
     ToolStripButton EditorButton(string text,string tip,Action action) { var b=new ToolStripButton(text) { ToolTipText=tip,ForeColor=ForeColor,Padding=new Padding(2,0,2,0) }; b.Click+=delegate { action(); }; bar.Items.Add(b); return b; }
     void UpdateEditorTools() {
-        if(editToggle==null)return;
+        if(editToggle==null||closing||IsDisposed||Disposing)return;
         bool available=sizes!=null && !editBusy;
         foreach(var tool in documentTools)tool.Enabled=available; pages.Enabled=available;
         editToggle.Enabled=available; editToggle.Checked=canvas.Editing; saveButton.Enabled=available;
         addText.Visible=addImage.Visible=editText.Visible=undoButton.Visible=redoButton.Visible=false;
-        if(palette!=null){palette.SetBusy(editBusy);if(!canvas.Editing){palette.Hide();editorDock.Visible=false;}}
+        if(HasPalette){palette.SetBusy(editBusy);if(!canvas.Editing){palette.Hide();editorDock.Visible=false;}}
         addText.Enabled=addImage.Enabled=available;
         editText.Enabled=available && canvas.Selected!=null && canvas.Selected.Kind==1;
         undoButton.Enabled=available && editorState.CanUndo; redoButton.Enabled=available && editorState.CanRedo;
@@ -45,7 +45,7 @@ internal sealed partial class MainForm {
         canvas.MarkMode=false;markButton.Checked=false;canvas.Editing=!canvas.Editing; canvas.ClearObjects();
         if(canvas.Editing) { rotations[pageIndex]=0; Navigate(pageIndex); status.Text="Edit · Select a region · Drag selection handles to transform · Double-click text to edit"; }
         else { canvas.Cursor=Cursors.Hand; status.Text="View mode"; }
-        if(canvas.Editing)ShowPalette(); else if(palette!=null){palette.Hide();editorDock.Visible=false;}
+        if(canvas.Editing)ShowPalette(); else if(HasPalette){palette.Hide();editorDock.Visible=false;}
         UpdateEditorTools(); canvas.Focus();
     }
     void LoadEditObjects(int selectedId) {
@@ -81,12 +81,13 @@ internal sealed partial class MainForm {
         int[] ids=obj==null?new int[0]:obj.Ids;TextStyle copy=style.Copy();if(obj!=null){copy.BoxWidth=obj.IsParagraph&&obj.Style!=null?obj.Style.BoxWidth:obj.Bounds.Width*canvas.PageSize.Width;copy.Wrap=obj.IsParagraph||copy.Wrap;copy.BlockKey=obj.BlockKey??copy.BlockKey;}ApplyEdit(delegate(PdfEngine e){return e.PutTextBlock(pageIndex,ids,value,copy,position,obj==null?0:obj.Angle);});
     }
     void ShowPalette() {
-        if(palette==null || palette.IsDisposed){palette=new EditorPalette();palette.Location=PointToScreen(new Point(Math.Max(0,Width-250),45));palette.Command+=PaletteCommand;palette.Highlight.CheckedChanged+=delegate{canvas.HighlightObjects=palette.Highlight.Checked;canvas.Invalidate();};palette.Lines.CheckedChanged+=delegate{if(!FinishInline())return;canvas.GroupLines=palette.Lines.Checked;canvas.SetObjects(editorState,-1);};palette.SetStyle(textStyle);VisibleChanged+=delegate{if(palette!=null&&palette.TopLevel){if(Visible&&canvas.Editing){if(!palette.Visible)palette.Show(TopLevelControl as Form??this);}else palette.Hide();}};}
-        editorDock.Visible=false;palette.Mode(canvas.ToolMode);if(!palette.Visible)palette.Show(TopLevelControl as Form??this);RefreshLayers();
+        if(closing||IsDisposed||Disposing)return;
+        EnsurePalette();editorDock.Visible=false;
+        if(HasPalette)palette.Mode(canvas.ToolMode);SyncPaletteVisibility();RefreshLayers();
     }
     void TogglePaletteFloat(){ShowPalette();}
     void PaletteCommand(string command) {
-        if(editBusy)return;
+        if(editBusy||closing||IsDisposed||Disposing||!HasPalette)return;
         switch(command){
             case "close":ToggleEditing();break;case "float":TogglePaletteFloat();break;
             case "select":if(!FinishInline())return;canvas.SetTool(0);palette.Mode(0);break;

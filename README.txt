@@ -1,6 +1,6 @@
-VinsPDF 0.29 — 22 November 2026
+VinsPDF 0.29.1 — 22 November 2026
 
-Install VinsPDF-Setup-0.29.exe, or choose About > Check for updates. Setup installs
+Install VinsPDF-Setup-0.29.1.exe, or choose About > Check for updates. Setup installs
 per user with PDF associations, shortcuts and uninstall. Updates replace the
 installed app after download verification.
 

@@ -2,7 +2,9 @@
 
 A compact dark Windows PDF viewer/editor. Windows 10/11 x64, .NET Framework 4.8.
 
-**[Download VinsPDF 0.29 — Windows installer](https://github.com/DangerousKitty666/VinsPDF/releases/download/v0.29/VinsPDF-Setup-0.29.exe)**
+**[Download VinsPDF 0.29.1 — Windows installer](https://github.com/DangerousKitty666/VinsPDF/releases/download/v0.29.1/VinsPDF-Setup-0.29.1.exe)**
+
+0.29.1 fixes the disposed editing-panel crash on closing a tab/window.
 
 Setup installs shortcuts, PDF associations and an uninstaller. About > Check for updates downloads and verifies future installers, then updates in place. Choose the PDF default in Windows Default Apps.
 
