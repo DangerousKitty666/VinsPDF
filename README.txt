@@ -1,6 +1,6 @@
-VinsPDF 0.29.1 — 22 November 2026
+VinsPDF 0.30 — 22 November 2026
 
-Install VinsPDF-Setup-0.29.1.exe, or choose About > Check for updates. Setup installs
+Install VinsPDF-Setup-0.30.exe, or choose About > Check for updates. Setup installs
 per user with PDF associations, shortcuts and uninstall. Updates replace the
 installed app after download verification.
 
@@ -8,7 +8,7 @@ Viewing
 - Click the original Home logo, + or Ctrl+O to open. Tabs have filename tooltips
   and an x; drag a tab outside the strip to move it into a separate window.
 - Layout: single/two pages. F11: full screen. F9: left thumbnails. PAGES » opens
-  a translucent three-column overview beside the button. Select a page or click
+  a translucent three-column, three-row overview beside the button. Select a page or click
   outside to dismiss it.
 - Page labels use PDF metadata (e.g. i, ii, 1, 2). Enter a label to jump, or #5
   for physical page 5. The total is the physical count. Printed numbering without
@@ -19,6 +19,8 @@ Viewing
 - Search / Ctrl+F highlights matches. F3 / Shift+F3 or arrows navigate; Aa matches
   case. Results arrive progressively, up to 5,000 per search. Search needs text,
   not scanned/outlined letters. OCR is not included.
+- Drag across text in view mode to select it. Ctrl+C copies; Ctrl+A selects all
+  page text. Right-click offers Copy and Select all.
 - Highlight works outside the editor: drag across text to add a yellow PDF
   annotation. Ctrl+Z undoes and Ctrl+S saves. Saved annotations are displayed;
   this is not a general editor for existing annotations.
@@ -34,7 +36,11 @@ Editing
   frame resizes. Font/text: family, size, bold/italic/underline/strike, colour and
   left/centre/right/justified alignment. Spacing sets characters, lines and
   paragraph gaps. Apply / Ctrl+Enter commits; Esc cancels. Marker and list controls
-  are removed. Formatting applies to the whole item; mixed styles are unsupported.
+  are removed. Font family, size, colour, bold and italic runs are retained.
+  Select part of the text to format that selection. An unavailable PDF font is
+  substituted with an installed supported font; exact font metrics can differ.
+  Regenerating an edited page can also change original glyph spacing/kerning.
+  Displayed text/path colours are preserved as RGB when regenerating a page.
 - Similarly styled, aligned horizontal body text and nearby paragraphs group into
   one box. Paragraph breaks and wrapping survive font changes, saving and rotation.
   Text reflows inside that box; unrelated boxes/pages do not automatically move.
@@ -43,6 +49,9 @@ Editing
 - Images: PNG/JPEG/BMP/TIFF. Grid updates live and is neither exported nor snapped.
   Headers/footers and named editor layers remain available. Layer names persist;
   visibility/locks are session aids, and saved PDFs include non-deleted groups.
+  Ordinary nested Form XObjects are prepared lazily when editing starts, without
+  rasterising the page. Shared uses become independent. Transparency/reference
+  groups and inline-image streams remain intact and are not expanded for editing.
   This is not full optional-content layer authoring or nested CAD geometry editing.
 - Undo preserves the camera. Recent matching view snapshots repaint immediately;
   the cache is limited to 32 MB per document. Evicted/changed views need rendering.
@@ -62,11 +71,12 @@ Tools and saving
   quality and greyscale are available where applicable. Raster output is limited
   to 24 megapixels/page; use lower DPI for large sheets. Multiple images get
   ordered numbered filenames. Flattened output no longer has editable text.
-- Editable export is lossless. Fast optimises structure while preserving existing
-  compressed streams; Thorough also recompresses streams and can take minutes on
-  large scans/CAD PDFs. Image quality is preserved. Already compressed PDFs may
-  barely shrink; the smaller valid result is kept. DPI/JPEG quality affect raster
-  formats only.
+- Editable export defaults to Strong: it reduces eligible opaque images at the
+  chosen DPI/JPEG quality while retaining text and vector objects. Default 150 DPI,
+  quality 70. This can reduce image detail; masked/transparent images are preserved.
+  Fast and Thorough are lossless options. Thorough/Strong can take minutes on
+  large PDFs. Already compressed files may barely shrink; the smaller valid result
+  is kept. Strong does not rasterise pages.
 - Print / Ctrl+P opens printer settings; pages fit the paper margins.
 - Ctrl+S offers an edited copy on the first ordinary save; Ctrl+Shift+S is Save As.
   Organise > Save later explicitly targets the original. Closing changed tabs
@@ -79,7 +89,7 @@ Scope and privacy
 Windows 10/11 x64, .NET Framework 4.8. PDFium and QPDF run locally; no Python or
 browser is installed. QPDF starts only for relevant document tools. Only Check
 for updates contacts GitHub; documents are not uploaded. Password entry, OCR,
-form-field editing and nested Form XObject editing are not included. Inline text
+and form-field editing are not included. Inline text
 approximates font metrics; the final render after Apply shows spacing/rotation.
 The shared viewer raster cache is 96 MB; native pages, tabs and undo add memory.
 Complex first renders still take time. App and installer are unsigned.

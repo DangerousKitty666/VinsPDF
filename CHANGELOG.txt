@@ -1,18 +1,27 @@
-VinsPDF 0.29.1 — 22 November 2026
+VinsPDF 0.30 (the 0.3 update) — 22 November 2026
 
-Fixes the "Cannot access a disposed object. Object name: EditorPalette" crash
-when closing an edited document tab or window.
+- Select and edit text inside ordinary nested PDF groups, including independently
+  editing repeated groups. Preparation happens on entering editing, not opening.
+- Edit directly in the on-page border with mixed font weights, sizes and colours.
+  Font controls apply to selected text; single-line text no longer wraps on entry.
+- Select and copy PDF text without entering the editor.
+- Page overview fits three columns and three rows at its default size.
+- Smaller colour control without the red underline; Layout moved after Width.
+- Restore standard Windows snap/resize styles while retaining the dark title bar.
+- Strong editable compression downsamples eligible images with adjustable DPI and
+  JPEG quality. Lossless Fast and Thorough options remain available.
+- Preserve the editing-panel close/crash fixes from 0.29.1.
+- Prevent missing letters when saving documents with multiple embedded subsets
+  of the same font; preserve displayed text/path colours on regenerated pages.
+- Keep separate bullet items out of paragraph groups and infer normal line gaps.
+- F11 restores the snapped window position and size.
 
-- Closed documents stop panel visibility callbacks before disposing their tools.
-- Each document has one panel visibility handler, with safe disposal and recovery.
-- Moving tabs transfers panel ownership; closing the old window cannot destroy
-  another document's editing panel.
-- Delayed layer updates ignore closed/replaced panels. Save, discard and cancel
-  continue to work, including pending text edits.
-- About / update status displays the complete patch version.
+Ordinary groups are supported. Transparency/reference groups and inline-image
+streams remain untouched. Unavailable PDF fonts use an installed substitute.
+Regenerating an edited page can slightly change glyph spacing. The HTM document
+was checked for text/colour preservation, save/reopen and unchanged other pages;
+exact font metrics and kerning are not guaranteed.
+Strong compression changes image quality, while keeping text and vectors editable.
 
-Reproduced the error on 0.29. All seven new close/save/cancel/detach/recovery tests
-pass after the fix, including verification that saved test text remains in the PDF.
-The release workflow now runs these tests before publishing installers.
-
-Install VinsPDF-Setup-0.29.1.exe, or use About > Check for updates.
+Numbered 0.30 so existing installations recognise it as newer than 0.29.1.
+Install VinsPDF-Setup-0.30.exe, or use About > Check for updates.

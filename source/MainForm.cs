@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -67,7 +67,7 @@ internal sealed partial class MainForm : DarkWindow {
     public static string SelfTestDirectory;
     int lastRenderedVersion=-1;
     public MainForm(string initialPath) {
-        Text="VinsPDF"; Width=1320; Height=900; MinimumSize=new Size(860,500);
+        Text="VinsPDF"; Width=1320; Height=900; MinimumSize=new Size(480,300);
         Icon=Icon.ExtractAssociatedIcon(Application.ExecutablePath);
         StartPosition=FormStartPosition.CenterScreen; BackColor=Color.Black; ForeColor=Color.FromArgb(224,228,235);
         Font=new Font("Segoe UI",9); KeyPreview=true; AllowDrop=true;
@@ -86,7 +86,7 @@ internal sealed partial class MainForm : DarkWindow {
         view.DropDownItems.Add(Item("&Actual size",delegate { canvas.ActualSize(); },Keys.Control|Keys.D1));
         view.DropDownItems.Add(Item("&Page thumbnails",ToggleThumbnails,Keys.F9));
         var help=new ToolStripMenuItem("&Help");
-        help.DropDownItems.Add(Item("Controls & about",delegate { DarkMessage.Show(this,"VinsPDF 0.29.1 · Viewer + editor\n\nCtrl+O Open · Ctrl+S Save · Ctrl+Shift+S Save As\nCtrl+E Edit mode · Ctrl+Z Undo · Ctrl+Y Redo\nCtrl+0 Fit page · Ctrl+2 Fit width · F9 Thumbnails · F11 Full screen · Ctrl+F Search\nCtrl+wheel Zoom · Middle-drag or Alt+drag Pan\n\nEdit: select text or an image. Drag its centre handle to move.\nDrag the corner to resize; Shift allows free proportions.\nDouble-click text to edit. Delete removes the selection.\nText blocks are recognised geometrically. Nested form content is not editable.\nToolbar rotation changes the view. Selection rotation is saved.\nInline text: Ctrl+Enter applies; Esc cancels.","VinsPDF",MessageBoxButtons.OK,MessageBoxIcon.Information); },Keys.None));
+        help.DropDownItems.Add(Item("Controls & about",delegate { DarkMessage.Show(this,"VinsPDF 0.30 · Viewer + editor\n\nCtrl+O Open · Ctrl+S Save · Ctrl+Shift+S Save As\nCtrl+E Edit mode · Ctrl+Z Undo · Ctrl+Y Redo\nCtrl+0 Fit page · Ctrl+2 Fit width · F9 Thumbnails · F11 Full screen · Ctrl+F Search\nCtrl+wheel Zoom · Middle-drag or Alt+drag Pan\n\nEdit: select text or an image. Drag its centre handle to move.\nDrag the corner to resize; Shift allows free proportions.\nDouble-click text to edit. Delete removes the selection.\nText blocks are recognised geometrically. Ordinary nested text groups can be edited.\nToolbar rotation changes the view. Selection rotation is saved.\nInline text: Ctrl+Enter applies; Esc cancels.","VinsPDF",MessageBoxButtons.OK,MessageBoxIcon.Information); },Keys.None));
         menu.Items.AddRange(new ToolStripItem[]{file,view,help}); MainMenuStrip=menu;
         bar.Renderer=renderer; bar.BackColor=BackColor; bar.ForeColor=ForeColor; bar.GripStyle=ToolStripGripStyle.Hidden; bar.Padding=new Padding(3,2,3,2); bar.AutoSize=false; bar.Height=30;
         menu.Items.Clear();
@@ -246,7 +246,7 @@ internal sealed partial class MainForm : DarkWindow {
                         canvas.SetPreview((Bitmap)bitmap.Clone());
                         if(!thumbs.ContainsKey(index) && rotation==0) { thumbs[index]=new Bitmap(bitmap,new Size(150,Math.Max(1,(int)(150.0*bitmap.Height/bitmap.Width)))); pages.Invalidate(); }
                     }
-                    if(documentVisible&&thumbnailsEnabled){worker.ClearIdle();QueueNextPage(token,index);QueueThumbnails(token);}
+                    if(documentVisible&&thumbnailsEnabled){worker.ClearIdle();if(canvas.MarkGlyphs.Count==0)LoadMarkGlyphs();QueueNextPage(token,index);QueueThumbnails(token);}
                     status.Text="Page "+(index+1)+" of "+sizes.Length+"  ·  "+elapsed+" ms  ·  "+(canvas.Editing?"Select / Pan · Double-click text to edit":"Ctrl+wheel to zoom / drag to pan");
                     if(firstPaint) { firstPaint=false; canvas.Update(); Trace("first_page_ms="+openClock.ElapsedMilliseconds); Trace("startup_to_page_ms="+Startup.ElapsedMilliseconds); QueueThumbnails(token); if(V029Directory!=null&&!V029Started){V029Started=true;Start029Test();}else if(V028Directory!=null&&!V028Started){V028Started=true;Start028Test();}else if(V027Directory!=null&&!V027Started){V027Started=true;Start027Test();}else if(V026Directory!=null&&!V026Started){V026Started=true;Start026Test();}else if(EditorTestDirectory!=null)StartEditorUITest(); else if(SelfTestDirectory!=null)StartSelfTest(); else if(SnapshotPath!=null) { testTimer=new Timer(); testTimer.Interval=3500; testTimer.Tick+=delegate { testTimer.Stop(); testTimer.Dispose(); SaveSnapshot(); }; testTimer.Start(); } }
                 },bitmap);
@@ -288,7 +288,7 @@ internal sealed partial class MainForm : DarkWindow {
         if(selected)using(var pen=new Pen(Color.FromArgb(107,167,217),2))e.Graphics.DrawRectangle(pen,e.Bounds.X+2,e.Bounds.Y+2,e.Bounds.Width-5,e.Bounds.Height-5);
     }
     protected override bool ProcessCmdKey(ref Message msg,Keys key) {
-        if(key==Keys.F11){var shell=TopLevelControl as TabWindow;if(shell!=null)shell.ToggleFullScreen();return true;}if(key==(Keys.Control|Keys.F)){ShowSearch();return true;}if(key==Keys.F3||key==(Keys.Shift|Keys.F3)){NextSearch(key==Keys.F3?1:-1);return true;}if(InlineKey(key))return true; if(inlineText!=null&&inlineText.Focused)return base.ProcessCmdKey(ref msg,key);
+        if(key==Keys.F11){var shell=TopLevelControl as TabWindow;if(shell!=null)shell.ToggleFullScreen();return true;}if(key==(Keys.Control|Keys.F)){ShowSearch();return true;}if(key==Keys.F3||key==(Keys.Shift|Keys.F3)){NextSearch(key==Keys.F3?1:-1);return true;}if(InlineKey(key))return true;if(!canvas.Editing&&(canvas.Focused||secondCanvas.Focused)){var target=secondCanvas.Focused?secondCanvas:canvas;if(key==(Keys.Control|Keys.C)){target.CopyText();return true;}if(key==(Keys.Control|Keys.A)){target.SelectAllText();return true;}} if(inlineText!=null&&inlineText.Focused)return base.ProcessCmdKey(ref msg,key);
         if(EditorShortcut(key))return true;
         if(!pageBox.Focused) {
             if(key==Keys.PageDown) { Go(1); return true; }

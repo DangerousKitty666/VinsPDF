@@ -44,7 +44,7 @@ internal sealed partial class MainForm {
         if(!canvas.Editing && twoPages)SetTwoPages(false);
         canvas.MarkMode=false;markButton.Checked=false;canvas.Editing=!canvas.Editing; canvas.ClearObjects();
         if(canvas.Editing) { rotations[pageIndex]=0; Navigate(pageIndex); status.Text="Edit · Select a region · Drag selection handles to transform · Double-click text to edit"; }
-        else { canvas.Cursor=Cursors.Hand; status.Text="View mode"; }
+        else { canvas.Cursor=Cursors.Hand;LoadMarkGlyphs(); status.Text="View · Drag text to select · Ctrl+C copies · Middle-drag pans"; }
         if(canvas.Editing)ShowPalette(); else if(HasPalette){palette.Hide();editorDock.Visible=false;}
         UpdateEditorTools(); canvas.Focus();
     }

@@ -11,7 +11,9 @@ namespace VinsPDF {
 internal static class Program {
     [DllImport("user32.dll")] static extern bool SetProcessDPIAware();
     [STAThread] static int Main(string[] args) {
-        if(args.Length>0 && args[0]=="--v029-large-test")return Large029Tests.Run(args);
+        if(args.Length>0 && args[0]=="--v030-document-test")return Document030Tests.Run(args);
+        if(args.Length>0 && args[0]=="--v030-engine-test")return Version030Tests.Run(args);
+        if(args.Length>0 && (args[0]=="--v029-large-test"||args[0]=="--v030-large-test"))return Large029Tests.Run(args);
         if(args.Length>0 && args[0]=="--v029-engine-test")return Version029Tests.Run(args);
         if(args.Length>0 && args[0]=="--v028-engine-test")return Version028Tests.Run(args);
         if(args.Length>0 && args[0]=="--v027-engine-test")return Version027Tests.Run(args);
@@ -58,5 +60,6 @@ internal static class Program {
     }
 }
 }
+
 
 

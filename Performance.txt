@@ -1,3 +1,52 @@
+VinsPDF 0.30 validation - 22 November 2026
+
+User documents were tested locally; none are included in this repository.
+Original files were not changed. Tests are observations on one PC, not controlled
+cold-start benchmarks or guarantees for every PDF.
+
+A012 (15 pages, 54.6 MB) and A014 (24 pages, 62.1 MB): all 39 pages rendered.
+                              A012          A014
+Native open                   38.63 ms      44.06 ms
+First page at 1400 px          2014.01 ms    1759.53 ms
+Zoom viewport                 532.92 ms     1169.28 ms
+All-page FRAME search          1648 ms       849 ms
+Strong editable export        204.5 sec     263.9 sec
+Size reduction                5.0%          7.0%
+Output bytes                  51,960,508    59,160,189
+These drawings had no eligible images to downsample. Page counts, sizes and
+search text across every page survived the exports.
+
+A013 notes/translation (13 pages): recognised 88 black text objects inside nested
+groups. All prepared pages matched the original render. Selecting/editing nested
+text, undo/redo, mixed formatting, highlight-before-edit and save/reopen passed.
+Embedded-font subset regression checks catch missing glyphs after saving.
+All other pages remained unchanged. Strong export retained text across all pages,
+reducing 10,362,471 bytes to 6,833,380 bytes (34.1% against the original).
+
+HTM0301 Part A 2022 (213 pages): all pages rendered. Native open 29.03 ms; first
+page 14.32 ms. All 213 pages retained their appearance after editor preparation.
+Physical page 21 / label 5: paragraph editing, wrapping, undo/redo and save/reopen
+passed. Text and colours were preserved, including blue headings. The remaining
+212 pages matched the original renders. Roman/Arabic labels and search passed.
+LIMITATION: regenerated-page glyph spacing can differ, and an unavailable font
+uses a supported installed substitute. Exact kerning/font fidelity is not claimed.
+
+0.25-0.30 engine regressions pass. Synthetic fixtures cover nested/shared/rotated
+groups, colliding embedded font subsets, CMYK text colours, image compression,
+paragraph boundaries, rich formatting, page labels and document tools.
+UI event checks cover on-page formatting, copying, fixed-camera undo and overview
+layout. Seven panel/window/tab shutdown and save/cancel lifecycle cases pass.
+Live UI inspection verified on-page mixed formatting, compact colour control,
+three-column/three-row overview, Windows side/corner snapping and F11 restoration.
+These are not exhaustive high-DPI, multiple-monitor, printer or accessibility tests.
+
+The current installer passed an isolated in-place upgrade, exact installed-payload
+comparison, and editing/save/reopen tests from the installed executable. Earlier
+testing covered replacement of 0.29.1. GitHub's clean Windows runner performs full
+installation, associations/icons, replacement and uninstall checks before release.
+
+Previous release measurements and validation follow for reference:
+
 VinsPDF 0.29 validation — 22 November 2026
 
 Current user-approved A012: 15 pages, 54.6 MB. A014: 24 pages, 62.1 MB.

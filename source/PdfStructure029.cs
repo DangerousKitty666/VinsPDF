@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -9,7 +9,7 @@ using System.Threading;
 using System.Windows.Forms;
 namespace VinsPDF {
 internal static class PdfTools {
- static string Quote(string value){var b=new StringBuilder("\"");int slashes=0;foreach(char c in value){if(c=='\\'){slashes++;continue;}if(c=='\"'){b.Append('\\',slashes*2+1);b.Append(c);}else{b.Append('\\',slashes);b.Append(c);}slashes=0;}b.Append('\\',slashes*2);return b.Append('"').ToString();}
+ internal static string Quote(string value){var b=new StringBuilder("\"");int slashes=0;foreach(char c in value){if(c=='\\'){slashes++;continue;}if(c=='\"'){b.Append('\\',slashes*2+1);b.Append(c);}else{b.Append('\\',slashes);b.Append(c);}slashes=0;}b.Append('\\',slashes*2);return b.Append('"').ToString();}
  public static void Run(params string[] args){string exe=Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"qpdf","qpdf.exe");if(!File.Exists(exe))throw new IOException("The PDF tools component is missing. Reinstall VinsPDF.");var info=new ProcessStartInfo(exe,string.Join(" ",args.Select(Quote))){UseShellExecute=false,CreateNoWindow=true,WindowStyle=ProcessWindowStyle.Hidden,RedirectStandardOutput=true,RedirectStandardError=true};bool held=Monitor.IsEntered(PdfEngine.NativeGate);if(held)Monitor.Exit(PdfEngine.NativeGate);try{using(var process=new Process{StartInfo=info}){process.Start();var output=process.StandardOutput.ReadToEndAsync();var errors=process.StandardError.ReadToEndAsync();if(!process.WaitForExit(300000)){process.Kill();throw new IOException("This PDF operation took too long. The open document has not been replaced.");}string error=errors.Result;string ignored=output.Result;if(process.ExitCode!=0&&process.ExitCode!=3)throw new IOException("Could not process this PDF. "+error);}}finally{if(held)Monitor.Enter(PdfEngine.NativeGate);}}
  public static void InstallFile(string source,string target){string temp=Path.GetFullPath(target)+"."+Guid.NewGuid().ToString("N")+".tmp";try{File.Copy(source,temp,false);if(File.Exists(target))File.Replace(temp,target,null);else File.Move(temp,target);}finally{if(File.Exists(temp))File.Delete(temp);}}
 }

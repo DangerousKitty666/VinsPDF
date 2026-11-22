@@ -18,7 +18,7 @@ internal sealed partial class PdfEngine : IDisposable {
     internal static readonly object NativeGate=new object();static int users;bool disposed;
     public PdfEngine() {lock(NativeGate){if(users++==0)Native.FPDF_InitLibrary();}}
     public void Open(string path) {
-        Close();
+        Close(); openedFile=path;groupsPrepared=false;
         byte[] utf8 = Encoding.UTF8.GetBytes(path + "\0");
         document = Native.FPDF_LoadDocument(utf8, null);
         if (document == IntPtr.Zero) {

@@ -49,6 +49,7 @@ internal sealed partial class PdfEngine {
     }
     public void DeleteObjects(int index,int[] ids) { Batch(index,delegate {foreach(int id in ids.Distinct())DeleteObject(index,id);}); }
     public int PutTextBlock(int index,int[] oldIds,string text,TextStyle style,PointF position,float angle=0) {
+        EnsureEditableGroups();
         if(string.IsNullOrWhiteSpace(text))throw new IOException("Enter text.");
         if(style.Size<1 || style.Size>500 || style.LineHeight<.5f || style.LineHeight>5 || style.CharacterSpacing< -2 || style.CharacterSpacing>30)throw new IOException("Invalid text settings.");
         if(style.Wrap&&style.BlockKey==null)style.BlockKey="VinsPDF.Block."+Guid.NewGuid().ToString("N");

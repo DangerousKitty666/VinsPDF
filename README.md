@@ -2,9 +2,9 @@
 
 A compact dark Windows PDF viewer/editor. Windows 10/11 x64, .NET Framework 4.8.
 
-**[Download VinsPDF 0.29.1 — Windows installer](https://github.com/DangerousKitty666/VinsPDF/releases/download/v0.29.1/VinsPDF-Setup-0.29.1.exe)**
+**[Download VinsPDF 0.30 — Windows installer](https://github.com/DangerousKitty666/VinsPDF/releases/download/v0.30/VinsPDF-Setup-0.30.exe)**
 
-0.29.1 fixes the disposed editing-panel crash on closing a tab/window.
+0.30 is the requested 0.3 update: nested text editing, formatting within the page, viewer text copying, stronger editable compression and compact UI improvements. Numbered 0.30 for correct upgrades from 0.29.1.
 
 Setup installs shortcuts, PDF associations and an uninstaller. About > Check for updates downloads and verifies future installers, then updates in place. Choose the PDF default in Windows Default Apps.
 
@@ -18,9 +18,9 @@ Setup installs shortcuts, PDF associations and an uninstaller. About > Check for
 
 [Controls and scope](README.txt) | [Release changes](CHANGELOG.txt) | [Performance and tests](Performance.txt)
 
-Paragraph grouping uses geometry and matching styles. It does not perform OCR or reflow unrelated boxes/pages. Mixed styles within one item and nested CAD geometry editing are unsupported. Page labels require PDF metadata. Editor layers are named page-level groups, not full optional-content layer authoring.
+Paragraph grouping uses geometry and matching styles. It does not perform OCR or reflow unrelated boxes/pages. Mixed text formatting and ordinary nested text groups are supported. Transparency/reference groups and inline-image streams are not expanded; nested CAD geometry editing is unsupported. Unavailable PDF fonts use an installed substitute. Regenerating an edited page can slightly change glyph spacing/kerning. Page labels require PDF metadata. Editor layers are named page-level groups, not full optional-content layer authoring.
 
-Editable exports preserve image quality and text. Fast compression optimises structure; Thorough recompresses streams and may take minutes. Already compressed files may barely shrink. Flattened PDF/image exports rasterise content. Extract/Combine may omit document-level features; Organise retains metadata and references to retained pages.
+Strong editable export reduces eligible opaque images at the selected DPI/quality while retaining text and vectors. Fast and Thorough preserve image quality; Thorough recompresses streams. Strong and Thorough may take minutes on large files. Already compressed files may barely shrink. Flattened PDF/image exports rasterise content. Extract/Combine may omit document-level features; Organise retains metadata and references to retained pages.
 
 ## Build and release
 

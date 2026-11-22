@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
@@ -16,9 +16,9 @@ internal sealed class SaveProgressDialog : StyledDialog {
  public SaveProgressDialog():base("Saving PDF",300,110){Controls.Add(new Label{Text="Saving your changes…",TextAlign=ContentAlignment.MiddleCenter,Dock=DockStyle.Fill,ForeColor=Color.Gainsboro});Ready();FormClosing+=delegate(object s,FormClosingEventArgs e){if(!Done)e.Cancel=true;};}
 }
 internal sealed partial class MainForm {
- bool SaveBeforeClose(string target){string value=inlineText==null?null:inlineText.Text;if(value!=null&&string.IsNullOrWhiteSpace(value)){status.Text="Enter text, or cancel the empty text box before saving.";return false;}EditObject obj=inlineObject;PointF position=inlinePosition;TextStyle style=textStyle.Copy();style.Wrap=inlineResized||style.Wrap;int index=pageIndex;bool committed=false,success=false;string error=null;
+ bool SaveBeforeClose(string target){string value=inlineText==null?null:inlineText.Text;if(value!=null&&string.IsNullOrWhiteSpace(value)){status.Text="Enter text, or cancel the empty text box before saving.";return false;}var rich=inlineText==null?null:CaptureInlineRuns();EditObject obj=inlineObject;PointF position=inlinePosition;TextStyle style=textStyle.Copy();style.Wrap=inlineResized||style.Wrap;int index=pageIndex;bool committed=false,success=false;string error=null;
  editBusy=true;viewVersion++;debounce.Stop();UpdateEditorTools();
- using(var progress=new SaveProgressDialog()){progress.Shown+=delegate{worker.Command(delegate(PdfEngine engine){try{if(value!=null){engine.PutTextBlock(index,obj==null?new int[0]:obj.Ids,value,style,position,obj==null?0:obj.Angle);committed=true;}engine.SaveCopy(target);success=true;}catch(Exception ex){error=ex.Message;}Post(delegate{progress.Done=true;progress.Close();},null);});};progress.ShowDialog(TopLevelControl as Form??this);}
+ using(var progress=new SaveProgressDialog()){progress.Shown+=delegate{worker.Command(delegate(PdfEngine engine){try{if(value!=null){engine.PutRichTextBlock(index,obj==null?new int[0]:obj.Ids,rich,style,position,obj==null?0:obj.Angle);committed=true;}engine.SaveCopy(target);success=true;}catch(Exception ex){error=ex.Message;}Post(delegate{progress.Done=true;progress.Close();},null);});};progress.ShowDialog(TopLevelControl as Form??this);}
  editBusy=false;if(committed)CancelInline();if(success){currentPath=target;dirty=false;structurePending=false;ClearUndoViews();savedOnce=true;uiHiddenLayers.Clear();uiLockedLayers.Clear();editorState=new EditState();canvas.ClearObjects();ClearImages();UpdateDocumentTitle();}else{ClearUndoViews();dirty=dirty||committed;UpdateDocumentTitle();}UpdateEditorTools();LoadEditObjects(-1);RequestRender();if(error!=null)DarkMessage.Show(TopLevelControl as Form??this,error,"Save failed");return success;
  }
 }

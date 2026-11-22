@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
 namespace VinsPDF {
@@ -12,13 +12,13 @@ internal sealed partial class EditorPalette {
  public void ChooseHighlight(){var menu=new ContextMenuStrip{Renderer=new DarkRenderer(),BackColor=Color.Black,ForeColor=Color.Gainsboro};menu.Items.Add("No highlight",null,delegate{markColor=null;Send("stylepreview");});foreach(Color c in new[]{Color.Yellow,Color.LightGreen,Color.LightBlue,Color.LightPink}){Color color=c;menu.Items.Add(c.Name,null,delegate{markColor=color;Send("stylepreview");});}menu.Items.Add("Choose colour…",null,delegate{using(var d=new ColorDialog{Color=markColor??Color.Yellow,FullOpen=true})if(d.ShowDialog(this)==DialogResult.OK){markColor=d.Color;Send("stylepreview");}});menu.Closed+=delegate{menu.Dispose();};menu.Show(Cursor.Position);}
 }
 internal sealed class InlineResizeFrame : Panel {
- public readonly TextBox Input=new TextBox{Multiline=true,AcceptsReturn=true,AcceptsTab=true,BorderStyle=BorderStyle.None,BackColor=Color.White,ForeColor=Color.Black,ScrollBars=ScrollBars.Vertical,Dock=DockStyle.Fill};
+ public readonly RichTextBox Input=new RichTextBox{Multiline=true,AcceptsTab=true,BorderStyle=BorderStyle.None,BackColor=Color.White,ForeColor=Color.Black,ScrollBars=RichTextBoxScrollBars.None,Dock=DockStyle.Fill,DetectUrls=false,HideSelection=false,EnableAutoDragDrop=false};
  public event Action ResizedByUser;bool resizing;int handle;Point press;Rectangle original;
- public InlineResizeFrame(){Padding=new Padding(4);BackColor=Color.White;Controls.Add(Input);MinimumSize=new Size(90,45);DoubleBuffered=true;}
+ public InlineResizeFrame(){Padding=new Padding(2);BackColor=Color.White;Controls.Add(Input);MinimumSize=new Size(28,22);DoubleBuffered=true;}
  int Hit(Point p){int x=p.X<5?-1:p.X>Width-6?1:0,y=p.Y<5?-1:p.Y>Height-6?1:0;return (x+1)+(y+1)*3;}
  protected override void OnMouseDown(MouseEventArgs e){if(e.Button!=MouseButtons.Left)return;handle=Hit(e.Location);if(handle==4)return;resizing=true;Capture=true;press=PointToScreen(e.Location);original=Bounds;}
  protected override void OnMouseMove(MouseEventArgs e){int h=resizing?handle:Hit(e.Location);int x=h%3-1,y=h/3-1;Cursor=x==0?Cursors.SizeNS:y==0?Cursors.SizeWE:x==y?Cursors.SizeNWSE:Cursors.SizeNESW;if(!resizing)return;Point p=PointToScreen(e.Location);int dx=p.X-press.X,dy=p.Y-press.Y,l=original.Left,t=original.Top,r=original.Right,b=original.Bottom;if(x<0)l=Math.Min(r-90,l+dx);if(x>0)r=Math.Max(l+90,r+dx);if(y<0)t=Math.Min(b-45,t+dy);if(y>0)b=Math.Max(t+45,b+dy);Bounds=Rectangle.FromLTRB(l,t,r,b);if(ResizedByUser!=null)ResizedByUser();}
  protected override void OnMouseUp(MouseEventArgs e){resizing=false;Capture=false;}
- protected override void OnPaint(PaintEventArgs e){base.OnPaint(e);using(var border=new Pen(Color.FromArgb(65,142,196),3.6f))e.Graphics.DrawRectangle(border,1.8f,1.8f,Width-3.6f,Height-3.6f);foreach(Point p in new[]{new Point(3,3),new Point(Width/2,3),new Point(Width-4,3),new Point(3,Height/2),new Point(Width-4,Height/2),new Point(3,Height-4),new Point(Width/2,Height-4),new Point(Width-4,Height-4)})e.Graphics.FillRectangle(Brushes.White,p.X-2,p.Y-2,4,4);}
+ protected override void OnPaint(PaintEventArgs e){base.OnPaint(e);using(var border=new Pen(Color.FromArgb(65,142,196),1.2f))e.Graphics.DrawRectangle(border,.6f,.6f,Width-1.2f,Height-1.2f);foreach(Point p in new[]{new Point(3,3),new Point(Width/2,3),new Point(Width-4,3),new Point(3,Height/2),new Point(Width-4,Height/2),new Point(3,Height-4),new Point(Width/2,Height-4),new Point(Width-4,Height-4)})e.Graphics.FillRectangle(Brushes.White,p.X-2,p.Y-2,4,4);}
 }
 }

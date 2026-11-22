@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace VinsPDF {
 internal sealed class EditObject {
-    public string BlockKey;public bool IsParagraph;public TextStyle Style;public int Id,Kind;public string Layer;public bool Locked;
+    public List<TextRun> Runs;public string BlockKey;public bool IsParagraph;public TextStyle Style;public int Id,Kind;public string Layer;public bool Locked;
     public RectangleF Bounds;
     public string Text;
     public string GroupKey,LineText;
@@ -32,7 +32,17 @@ internal sealed partial class PdfEngine {
     IntPtr editFont;
     void ResetEditing() { hiddenLayers.Clear();lockedLayers.Clear();layerHiddenObjects.Clear(); foreach(var font in extraFonts.Values)Native.FPDFFont_Close(font);extraFonts.Clear();undo.Clear(); redo.Clear(); pinned.Clear(); if(editFont!=IntPtr.Zero) { Native.FPDFFont_Close(editFont); editFont=IntPtr.Zero; } }
     void Check(bool okay,string message) { if(!okay)throw new IOException(message); }
-    void Generate(int index) { Check(Native.FPDFPage_GenerateContent(Page(index))!=0,"Unable to generate edited page content."); }
+    void Generate(int index) {
+        IntPtr page=Page(index);
+        // PDFium renders ICC/CMYK colours correctly but its content writer emits
+        // device RGB. Materialise the displayed colours before regenerating.
+        for(int i=0;i<Native.FPDFPage_CountObjects(page);i++){
+            IntPtr obj=Native.FPDFPage_GetObject(page,i);int kind=Native.FPDFPageObj_GetType(obj);if(kind!=1&&kind!=2)continue;
+            uint r,g,b,a;if(Native.FPDFPageObj_GetFillColor(obj,out r,out g,out b,out a)!=0)Native.FPDFPageObj_SetFillColor(obj,r,g,b,a);
+            if(Native.FPDFPageObj_GetStrokeColor(obj,out r,out g,out b,out a)!=0)Native.FPDFPageObj_SetStrokeColor(obj,r,g,b,a);
+        }
+        Check(Native.FPDFPage_GenerateContent(page)!=0,"Unable to generate edited page content.");
+    }
     void Commit(int index,Action back,Action forward) {
         // Render edited native objects directly. Generate content only at save;
         // repeated regeneration can reorder content across original PDF streams.
@@ -45,6 +55,7 @@ internal sealed partial class PdfEngine {
         RestoreLayerVisibility();RenderCache.Clear(this); Change c=source.Peek(); if(isRedo)c.Redo(); else c.Undo(); source.Pop(); dest.Push(c); return c.Page;
     }
     public EditState GetObjects(int index) {
+        EnsureEditableGroups();
         var result=new EditState { CanUndo=undo.Count>0,CanRedo=redo.Count>0 };
         IntPtr page=Page(index),textPage=Native.FPDFText_LoadPage(page);
         var textObjects=new Dictionary<IntPtr,EditObject>();var decorations=new Dictionary<string,List<int>>();
@@ -66,6 +77,7 @@ internal sealed partial class PdfEngine {
                     uint size=Native.FPDFTextObj_GetText(obj,textPage,IntPtr.Zero,0);
                     if(size>2 && size<2000000) { IntPtr buffer=Marshal.AllocHGlobal((int)size); try { Native.FPDFTextObj_GetText(obj,textPage,buffer,size); item.Text=(Marshal.PtrToStringUni(buffer)??"").Replace('\u00a0',' '); } finally { Marshal.FreeHGlobal(buffer); } }
                 }
+                if(kind==1&&item.Style==null)item.Style=ImportedStyle(obj,item.DisplayFontSize,item.Color);
                 if(kind==1){if(item.LineText!=null)item.Text=item.LineText;else if(item.Text.Length==0 && item.Bounds.Height<.00001f)item.Text=" ";}
                 item.Layer=ObjectLayer(obj);item.Locked=lockedLayers.Contains(LayerKey(index,item.Layer));result.Objects.Add(item);
             }
@@ -102,6 +114,7 @@ internal sealed partial class PdfEngine {
         return editFont;
     }
     public int PutText(int index,int oldId,string text,float size,PointF position) {
+        EnsureEditableGroups();
         if(string.IsNullOrWhiteSpace(text))throw new IOException("Enter some text.");
         if(text.IndexOf('\n')>=0 || text.IndexOf('\r')>=0)throw new IOException("Use one text line per object in this version.");
         if(size<1 || size>500)throw new IOException("Font size must be between 1 and 500 pt.");
@@ -120,6 +133,7 @@ internal sealed partial class PdfEngine {
         } catch { if(!inserted)Native.FPDFPageObj_Destroy(obj); throw; }
     }
     public int PutImage(int index,string path,RectangleF bounds) {
+        EnsureEditableGroups();
         IntPtr page=Page(index),obj=Native.FPDFPageObj_NewImageObj(document); Check(obj!=IntPtr.Zero,"Could not create image.");
         bool inserted=false;
         try {
@@ -187,6 +201,8 @@ internal static partial class Native {
     [DllImport("pdfium.dll",CharSet=CharSet.Unicode)] internal static extern int FPDFText_SetText(IntPtr obj,string text);
     [DllImport("pdfium.dll")] internal static extern int FPDFPageObj_GetFillColor(IntPtr obj,out uint r,out uint g,out uint b,out uint a);
     [DllImport("pdfium.dll")] internal static extern int FPDFPageObj_SetFillColor(IntPtr obj,uint r,uint g,uint b,uint a);
+    [DllImport("pdfium.dll")] internal static extern int FPDFPageObj_GetStrokeColor(IntPtr obj,out uint r,out uint g,out uint b,out uint a);
+    [DllImport("pdfium.dll")] internal static extern int FPDFPageObj_SetStrokeColor(IntPtr obj,uint r,uint g,uint b,uint a);
     [DllImport("pdfium.dll")] internal static extern IntPtr FPDFPageObj_NewImageObj(IntPtr doc);
     [DllImport("pdfium.dll")] internal static extern int FPDFImageObj_SetBitmap(IntPtr pages,int count,IntPtr obj,IntPtr bitmap);
     [DllImport("pdfium.dll")] internal static extern void FPDFPage_InsertObject(IntPtr page,IntPtr obj);

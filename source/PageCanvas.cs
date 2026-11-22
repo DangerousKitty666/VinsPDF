@@ -23,15 +23,15 @@ internal sealed partial class PageCanvas : Control {
     public string EmptyTitle="A clear view of your PDFs.";
     public PageCanvas() {
         SetStyle(ControlStyles.AllPaintingInWmPaint|ControlStyles.UserPaint|ControlStyles.OptimizedDoubleBuffer|ControlStyles.ResizeRedraw|ControlStyles.Selectable,true);
-        BackColor=Color.Black; Dock=DockStyle.Fill; TabStop=true; Cursor=Cursors.Hand;
+        InstallCopyMenu();BackColor=Color.Black; Dock=DockStyle.Fill; TabStop=true; Cursor=Cursors.Hand;
         Resize+=delegate { if(HasPage) { if(FitMode!="") Fit(FitMode); else Changed(); } };
     }
     public void SetPage(SizeF size,Bitmap thumb) {
-        HasPage=true; PageSize=size; panX=panY=0;
+        ClearTextSelection();MarkGlyphs.Clear();HasPage=true; PageSize=size; panX=panY=0;
         SetPreview(thumb); ClearDetail();
         if(FitMode!="") Fit(FitMode); else Changed();
     }
-    public void ClearPage() { HasPage=false; SetPreview(null); ClearDetail(); Invalidate(); }
+    public void ClearPage() { ClearTextSelection();MarkGlyphs.Clear();HasPage=false; SetPreview(null); ClearDetail(); Invalidate(); }
     public void SetPreview(Bitmap value) { if(preview!=null) preview.Dispose(); preview=value; Invalidate(); }
     public void ClearDetail() { if(detail!=null) detail.Dispose(); detail=null; }
     public Rectangle PageRectangle {

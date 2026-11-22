@@ -14,7 +14,7 @@ internal sealed class DocumentTab : Button {
 }
 internal sealed partial class TabWindow {
  bool fullScreen;Rectangle restoredBounds;FormWindowState restoredState;
- internal void ToggleFullScreen(){if(!fullScreen){restoredBounds=Bounds;restoredState=WindowState;WindowState=FormWindowState.Normal;SetTitleVisible(false);Resizable=false;Padding=Padding.Empty;Bounds=Screen.FromControl(this).Bounds;fullScreen=true;}else{fullScreen=false;SetTitleVisible(true);Resizable=true;Padding=new Padding(1);Bounds=restoredBounds;WindowState=restoredState;}}
+ internal void ToggleFullScreen(){if(!fullScreen){restoredBounds=ActualWindowBounds;restoredState=WindowState;WindowState=FormWindowState.Normal;SetTitleVisible(false);Resizable=false;RefreshWindowStyle();Padding=Padding.Empty;Bounds=Screen.FromControl(this).Bounds;fullScreen=true;}else{fullScreen=false;SetTitleVisible(true);Resizable=true;RefreshWindowStyle();Padding=new Padding(1);WindowState=restoredState;if(restoredState==FormWindowState.Normal)Bounds=restoredBounds;}}
 }
 internal sealed partial class PageCanvas {
  static readonly Image homeLogo=LoadHomeLogo();
@@ -23,11 +23,11 @@ internal sealed partial class PageCanvas {
  void PaintHome(Graphics g){Rectangle r=HomeLogoRectangle;using(var a=new ImageAttributes()){var m=new ColorMatrix();m.Matrix33=.18f;a.SetColorMatrix(m);g.DrawImage(homeLogo,r,0,0,homeLogo.Width,homeLogo.Height,GraphicsUnit.Pixel,a);}if(EmptyTitle.StartsWith("Opening"))TextRenderer.DrawText(g,"Opening PDF…",Font,new Rectangle(0,r.Bottom+8,Width,24),Color.Silver,TextFormatFlags.HorizontalCenter);}
 }
 internal sealed partial class EditorPalette {
- Button ColourButton(Control parent,int x,int y,int w){var b=Mini(parent,"Text colour",x,y,w,delegate{Send("colour");});b.Paint+=delegate(object s,PaintEventArgs e){var r=new Rectangle(10,8,14,12);using(var brush=new SolidBrush(textColor??Color.Black))e.Graphics.FillRectangle(brush,r);e.Graphics.DrawRectangle(Pens.Silver,r);using(var pen=new Pen(Color.FromArgb(220,70,70),2))e.Graphics.DrawLine(pen,31,22,w-11,22);};return b;}
+ Button ColourButton(Control parent,int x,int y,int w){var b=Mini(parent,"",x,y,w,delegate{Send("colour");});tips.SetToolTip(b,"Text colour");b.Paint+=delegate(object sender,PaintEventArgs e){using(var brush=new SolidBrush(textColor??Color.Black))e.Graphics.FillRectangle(brush,9,7,17,14);e.Graphics.DrawRectangle(Pens.Silver,9,7,17,14);TextRenderer.DrawText(e.Graphics,"▾",Font,new Rectangle(28,3,14,22),Color.Silver,TextFormatFlags.VerticalCenter);};return b;}
 }
 internal sealed partial class MainForm {
  Button expandPages;
- void PositionOverview(PageOverview popup){Rectangle screen=Screen.FromControl(this).WorkingArea;Point start=expandPages.PointToScreen(new Point(expandPages.Width+8,0));popup.Size=new Size(Math.Min(438,screen.Width-20),Math.Min(popup.Height,screen.Height-40));popup.Location=new Point(Math.Max(screen.Left,Math.Min(start.X,screen.Right-popup.Width)),Math.Max(screen.Top,Math.Min(start.Y,screen.Bottom-popup.Height)));}
+ void PositionOverview(PageOverview popup){Rectangle screen=Screen.FromControl(this).WorkingArea;Point start=expandPages.PointToScreen(new Point(expandPages.Width+8,0));popup.Size=new Size(Math.Min(456,screen.Width-20),Math.Min(popup.Height,screen.Height-40));popup.Location=new Point(Math.Max(screen.Left,Math.Min(start.X,screen.Right-popup.Width)),Math.Max(screen.Top,Math.Min(start.Y,screen.Bottom-popup.Height)));}
 }
 internal sealed class AboutVinsPDF : StyledDialog {
  readonly Stream animationStream;readonly Image animation;

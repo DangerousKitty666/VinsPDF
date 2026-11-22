@@ -14,6 +14,7 @@ internal sealed partial class MainForm {
  internal bool LifecycleReady{get{return !editBusy&&sizes!=null&&lastRenderedVersion==viewVersion;}}
  internal void LifecycleDiscard(){if(IsDisposed)return;CancelInline();dirty=false;}
  internal bool LifecycleStep(string scenario,ref int stage,TabWindow original,string directory){
+  if(scenario=="ui030")return Ui030Step(ref stage,original,directory);
   if(stage==0){ToggleEditing();stage++;return false;}
   if(stage==1){if(canvas.Objects.Count==0)return false;BeginInline(null);inlineText.Text="Palette lifetime test text";if(scenario=="inline-close"){palette.Close();Version029Tests.Assert(inlineText!=null&&inlineText.Text=="Palette lifetime test text"&&!palette.IsDisposed,"Closing tools discarded pending text");}CommitInline();stage++;return false;}
   if(stage==2){Version029Tests.Assert(dirty&&canvas.Editing&&palette.Visible,"Editor not ready");

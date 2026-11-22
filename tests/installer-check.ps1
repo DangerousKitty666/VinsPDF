@@ -25,6 +25,10 @@ $fixture = Join-Path $PSScriptRoot 'paragraph-fixture.pdf'
 $check = Start-Process -FilePath $exe -ArgumentList ('--v029-engine-test "' + $testFolder + '" "' + $fixture + '"') -Wait -PassThru -WindowStyle Hidden
 Get-Content (Join-Path $testFolder 'engine-029.txt')
 if ($check.ExitCode -ne 0) { throw 'Installed PDF tools failed' }
+$fixture = Join-Path $PSScriptRoot 'nested-fixture.pdf'
+$check = Start-Process -FilePath $exe -ArgumentList ('--v030-engine-test "' + $testFolder + '" "' + $fixture + '"') -Wait -PassThru -WindowStyle Hidden
+Get-Content (Join-Path $testFolder 'engine-030.txt')
+if ($check.ExitCode -ne 0) { throw 'Installed nested text editing failed' }
 $process = Start-Process -FilePath (Join-Path $root 'unins000.exe') -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART' -Wait -PassThru -WindowStyle Hidden
 if ($process.ExitCode -ne 0) { throw 'Uninstall failed' }
 if (Test-Path -LiteralPath 'HKCU:/Software/Classes/VinsPDF.Document') { throw 'Uninstall retained own association' }

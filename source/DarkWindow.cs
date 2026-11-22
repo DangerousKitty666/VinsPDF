@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
@@ -7,6 +7,13 @@ internal class DarkWindow : Form {
     readonly Panel title=new Panel();
     readonly Label caption=new Label();
     protected bool Resizable=true;
+    // Retain the normal Windows resize/snap styles beneath the dark custom frame.
+    protected override CreateParams CreateParams {get{var p=base.CreateParams;if(TopLevel&&Resizable)p.Style|=0x00040000|0x00080000|0x00020000|0x00010000|0x00C00000;return p;}}
+    protected void RefreshWindowStyle(){UpdateStyles();}
+    [StructLayout(LayoutKind.Sequential)]struct WindowRect{public int Left,Top,Right,Bottom;}
+    [DllImport("user32.dll")]static extern bool GetWindowRect(IntPtr window,out WindowRect rect);
+    protected Rectangle ActualWindowBounds{get{WindowRect r;return IsHandleCreated&&GetWindowRect(Handle,out r)?Rectangle.FromLTRB(r.Left,r.Top,r.Right,r.Bottom):Bounds;}}
+
     [DllImport("user32.dll")] static extern bool ReleaseCapture();
     [DllImport("user32.dll")] static extern IntPtr SendMessage(IntPtr hwnd,int msg,IntPtr w,IntPtr l);
     public DarkWindow() {
@@ -30,6 +37,7 @@ internal class DarkWindow : Form {
     protected void InstallTitle() { Controls.Add(title); }
     protected void HideMinMax() {foreach(Control c in title.Controls)if(c is Button && c.Text!="×")c.Visible=false;}
     protected override void WndProc(ref Message m) {
+        if(m.Msg==0x83&&TopLevel&&Resizable){m.Result=IntPtr.Zero;return;}
         base.WndProc(ref m);
         if(m.Msg==0x84 && Resizable && WindowState==FormWindowState.Normal) {
             Point pt=PointToClient(new Point((short)((long)m.LParam&65535),(short)(((long)m.LParam>>16)&65535)));

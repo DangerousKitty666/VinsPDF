@@ -1,15 +1,15 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 namespace VinsPDF {
 internal sealed class PageOverview : DarkWindow {
- internal readonly PreviewGrid Grid=new PreviewGrid();public PageOverview(int count){Text="PAGES · click a preview to jump";Icon=Icon.ExtractAssociatedIcon(Application.ExecutablePath);Size=new Size(438,Math.Min(580,Math.Max(215,((count+2)/3)*174+28)));StartPosition=FormStartPosition.Manual;Opacity=.9;ShowInTaskbar=false;Grid.Count=count;Controls.Add(Grid);InstallTitle();HideMinMax();Deactivate+=delegate{Close();};}
+ internal readonly PreviewGrid Grid=new PreviewGrid();public PageOverview(int count){Text="PAGES · click a preview to jump";Icon=Icon.ExtractAssociatedIcon(Application.ExecutablePath);Size=new Size(456,Math.Min(554,Math.Max(204,((count+2)/3)*174+30)));StartPosition=FormStartPosition.Manual;Opacity=.9;ShowInTaskbar=false;Grid.Count=count;Controls.Add(Grid);InstallTitle();HideMinMax();Deactivate+=delegate{Close();};}
 }
 internal sealed class PreviewGrid : ScrollableControl {
  public string[] Labels;public int Count;internal int ReadyCount{get{return images.Count;}}public event Action<int> SelectPage;public event Action<int,int> RequestPages;readonly Dictionary<int,Bitmap> images=new Dictionary<int,Bitmap>();
  public PreviewGrid(){Dock=DockStyle.Fill;AutoScroll=true;BackColor=Color.FromArgb(12,12,12);DoubleBuffered=true;Resize+=delegate{RefreshViewport();};Scroll+=delegate{RefreshViewport();};}
- int Columns{get{return Math.Max(1,ClientSize.Width/140);}}
+ internal int Columns{get{return Math.Max(1,ClientSize.Width/140);}}
  public void RefreshViewport(){AutoScrollMinSize=new Size(0,((Count+Columns-1)/Columns)*174);int first=Math.Max(0,-AutoScrollPosition.Y/174*Columns),last=Math.Min(Count,first+(ClientSize.Height/174+2)*Columns);if(RequestPages!=null)RequestPages(first,last);Invalidate();}
  public void SetImage(int index,Bitmap image){if(IsDisposed){image.Dispose();return;}Bitmap old;if(images.TryGetValue(index,out old))old.Dispose();images[index]=image;while(images.Count>96){int victim=-1;foreach(int k in images.Keys){if(Math.Abs(k-index)>20){victim=k;break;}}if(victim<0)break;images[victim].Dispose();images.Remove(victim);}Invalidate();}
  protected override void OnPaint(PaintEventArgs e){base.OnPaint(e);for(int i=Math.Max(0,-AutoScrollPosition.Y/174*Columns);i<Count;i++){int x=(i%Columns)*140+10,y=(i/Columns)*174+AutoScrollPosition.Y+8;if(y>Height)break;var rect=new Rectangle(x,y,120,138);Bitmap b;if(images.TryGetValue(i,out b)){float scale=Math.Min(120f/b.Width,138f/b.Height);e.Graphics.DrawImage(b,new Rectangle(x+(120-(int)(b.Width*scale))/2,y+(138-(int)(b.Height*scale))/2,(int)(b.Width*scale),(int)(b.Height*scale)));}else e.Graphics.FillRectangle(Brushes.DimGray,rect);TextRenderer.DrawText(e.Graphics,"Page "+(Labels!=null?Labels[i]:(i+1).ToString()),Font,new Rectangle(x,y+140,120,25),Color.Gainsboro,TextFormatFlags.HorizontalCenter);}}

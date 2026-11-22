@@ -36,6 +36,15 @@ jobs:
           $test = Start-Process ./VinsPDF.exe -ArgumentList '--v025-test work/tests tests/line-fixture.pdf' -Wait -PassThru -WindowStyle Hidden
           Get-Content work/tests/advanced-results.txt
           if ($test.ExitCode -ne 0) { throw 'Editing regression checks failed' }
+      - name: Test nested text and in-page formatting
+        shell: pwsh
+        run: |
+          $test = Start-Process ./VinsPDF.exe -ArgumentList '--v030-engine-test work/tests tests/nested-fixture.pdf' -Wait -PassThru -WindowStyle Hidden
+          Get-Content work/tests/engine-030.txt
+          if ($test.ExitCode -ne 0) { throw 'Nested text, subset fonts or compression failed' }
+          $test = Start-Process ./VinsPDF.exe -ArgumentList '--palette-lifecycle-test work/ui030 tests/nested-fixture.pdf ui030' -Wait -PassThru -WindowStyle Hidden
+          Get-Content work/ui030/palette-ui030.txt
+          if ($test.ExitCode -ne 0) { throw 'Inline formatting, copying or overview layout failed' }
       - name: Test editing-panel shutdown and recovery
         shell: pwsh
         run: |
